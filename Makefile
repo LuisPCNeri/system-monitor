@@ -1,6 +1,8 @@
+NCURSES_DIR = $(HOME)/built_pckgs/ncurses-6.4
+
 CC      = gcc
-CFLAGS  = -Wall -Wextra -O2 -g
-LDFLAGS = -lncurses
+CFLAGS  = -Wall -Wextra -O2 -g -I$(NCURSES_DIR)/include
+LDFLAGS = -static -L$(NCURSES_DIR)/lib -lncurses -ltinfo
 
 SRCS    = src/main.c src/proc/cpu.c src/proc/mem.c src/proc/proc.c src/tui/ui.c src/utils/hmap.c
 OBJS    = $(SRCS:.c=.o)
@@ -17,4 +19,4 @@ $(TARGET): $(OBJS)
 clean:
 	rm -f $(OBJS) $(TARGET)
 
-.PHONY: all clean
+.PHONY: all clean sysmon
