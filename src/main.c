@@ -1,6 +1,9 @@
+#include <bits/time.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <ncurses.h>
@@ -38,7 +41,7 @@ static void sleep_ms(long ms) {
     nanosleep(&ts, NULL);
 }
 
-/* ------------------------------------------------------------------ */
+typedef enum {MODE_NORMAL = 0, MODE_SEARCH = 1} app_mode;
 
 int main(void) {
     setup_signals();
@@ -51,43 +54,100 @@ int main(void) {
     int scroll  = 0;
     int sort_by = 0;
 
+    app_mode mode        = MODE_NORMAL;
+    char search_buf[256] = {0};
+    int search_len       = 0;
+
     cpu_read(&cpu_a);
     sleep_ms(500);
 
-    while (g_running) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    int is_starting = 1;
 
+    while (g_running) {
         if (g_resized) {
             g_resized = 0;
             endwin();
             refresh();
         }
 
-        cpu_read(&cpu_b);
-        unsigned long long cpu_delta = cpu_total_delta(&cpu_a, &cpu_b);
-        float cpu_pct = cpu_usage(&cpu_a, &cpu_b);
-        cpu_a = cpu_b;   /* shift window */
+        int max_scroll = 0;
+        process_data_t* list = NULL;
+        size_t count = 0;
+        float cpu_pct = 0.0f;
 
-        mem_read(&mem);
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        long elapsed = (t1.tv_sec - t0.tv_sec) * 1000 + (t1.tv_nsec - t0.tv_nsec) / 1000000;
 
-        refresh_processes(map, cpu_delta);
-        process_data_t* list;
-        get_all_processes(map, &list);
+        if(is_starting || elapsed >= 500) {
+            is_starting = 0;
+            t0 = t1;
 
-        qsort(list, (size_t)map->size, sizeof(process_data_t),
-              sort_by == 0 ? proc_cmp_cpu : proc_cmp_mem);
+            cpu_read(&cpu_b);
+            unsigned long long cpu_delta = cpu_total_delta(&cpu_a, &cpu_b);
+            cpu_pct = cpu_usage(&cpu_a, &cpu_b);
+            cpu_a = cpu_b;   /* shift window */
 
-        int max_scroll = map->size > 0 ? map->size - 1 : 0;
-        if (scroll > max_scroll) scroll = max_scroll;
+            mem_read(&mem);
 
-        tui_render(cpu_pct, &mem, map, scroll, list);
+            refresh_processes(map, cpu_delta);
+            count = get_all_processes(map, &list);
 
-        sleep_ms(500);
+            if(search_len > 0) {
+                size_t out = 0;
+                for(size_t i = 0; i < count; i++) {
+                    if(strcasestr(list[i].name, search_buf)) {
+                        list[out++] = list[i];
+                    }
+                }
+
+                count = out;
+            }
+
+            qsort(list, count, sizeof(process_data_t),
+                  sort_by == 0 ? proc_cmp_cpu : proc_cmp_mem);
+
+            max_scroll = map->size > 0 ? map->size - 1 : 0;
+            if (scroll > max_scroll) scroll = max_scroll;
+
+            tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode);
+        }
 
         int ch;
+        int should_exit_early = 0;
         while ((ch = ui_getc()) != ERR) {
-            switch (ch) {
+
+            if(mode == MODE_SEARCH) {
+ 
+                if(ch == 27) {
+                    search_buf[0] = '\0';
+                    search_len = 0;
+                    mode = MODE_NORMAL;
+                    scroll = 0;
+                    should_exit_early = 1;
+                }
+                else if(ch == '\n') {
+                    mode = MODE_NORMAL;
+                    scroll = 0;
+                }
+                else if(ch == KEY_BACKSPACE || ch == 127 || ch == '\b') {
+                    if(search_len > 0) search_buf[--search_len] = '\0';
+                    should_exit_early = 1;
+                }
+                else if (ch >= 32 && ch <= 127 && search_len < 255) {
+                    search_buf[search_len++] = (char) ch;
+                    search_buf[search_len]   = '\0';
+                    should_exit_early = 1;
+                }
+            }
+            else {
+                switch (ch) {
                 case 'q': case 'Q':
                     g_running = 0;
+                    break;
+                case 's': case 'S': case 'f': case 'F':
+                    mode = MODE_SEARCH;
                     break;
                 case KEY_UP:
                     if (scroll > 0) scroll--;
@@ -95,11 +155,11 @@ int main(void) {
                 case KEY_DOWN:
                     if (scroll < max_scroll) scroll++;
                     break;
-                case KEY_PPAGE:   /* Page Up */
+                case KEY_PPAGE:
                     scroll -= 10;
                     if (scroll < 0) scroll = 0;
                     break;
-                case KEY_NPAGE:   /* Page Down */
+                case KEY_NPAGE:
                     scroll += 10;
                     if (scroll > max_scroll) scroll = max_scroll;
                     break;
@@ -109,8 +169,14 @@ int main(void) {
                 case 'm': case 'M':
                     sort_by = 1;
                     break;
+                }
             }
+
+            if(should_exit_early) break;
         }
+
+        sleep_ms(16);
+        free(list);
     }
 
     tui_destroy();

@@ -5,7 +5,8 @@
 #include "../proc/proc.h"
 
 void tui_init();
-void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int scroll, process_data_t* processes_list);
+void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t* processes_list, 
+                size_t count, const char* search, int app_mode);
 int ui_getc();
 void tui_destroy();
 

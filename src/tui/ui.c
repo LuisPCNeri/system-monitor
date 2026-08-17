@@ -61,7 +61,8 @@ static void draw_bar(int y, int x, int w, float pct, const char* suffix) {
     if (suffix) mvaddstr(y, x + w + 1, suffix);
 }
 
-void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int scroll, process_data_t* processes_list) {
+void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t* processes_list, 
+                size_t count, const char* search, int app_mode) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
 
@@ -94,6 +95,18 @@ void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int 
     draw_bar(2, 5, bar_w, ram_pct, ram_suffix);
 
 
+    if(search && app_mode == 1) {
+        attron(COLOR_PAIR(CP_WARN));
+        mvprintw(3, 1, "Search: %s |", search);
+        attroff(COLOR_PAIR(CP_WARN));
+    }
+    else {
+        attron(COLOR_PAIR(CP_DIM));
+        mvprintw(3, 1, "[s]earch");
+        attroff(COLOR_PAIR(CP_DIM));
+    }
+
+
     attron(A_BOLD | COLOR_PAIR(CP_DIM));
     mvprintw(4, 0, " %7s %-20s %7s %10s %9s %5s", "PID", "NAME", "CPU %", "RSS", "PSS", "S");
     attroff(A_BOLD | COLOR_PAIR(CP_DIM));
@@ -102,7 +115,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int 
 
     int vis = rows - 7;
 
-    for(int i = 0; i < vis && (scroll + i) < map->size ; i++) {
+    for(int i = 0; i < vis && (scroll + i) < (int) count ; i++) {
 
         const process_data_t* p = &processes_list[scroll + i];
         if(p->pid == 0) continue;
