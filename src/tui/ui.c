@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include "ui.h"
 #include "../proc/mem.h"
 #include "../utils/hmap.h"
 
@@ -54,13 +55,13 @@ static void draw_bar(int y, int x, int w, float pct, const char* suffix) {
     for(int i = 0; i < filled; i++) mvaddch(y, x + 1 + i, '|');
     attroff(COLOR_PAIR(pair));
 
-    for(int i = 0; i < filled; i++) mvaddch(y, x + 1 + i, ' ');
+    for(int i = filled; i < inner; i++) mvaddch(y, x + 1 + i, ' ');
     mvaddch(y, x + w - 1, ']');
 
     if (suffix) mvaddstr(y, x + w + 1, suffix);
 }
 
-void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int scroll) {
+void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int scroll, process_data_t* processes_list) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
 
@@ -100,14 +101,12 @@ void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int 
 
 
     int vis = rows - 7;
-    process_data_t* processes_list;
-    if(!get_all_processes(map, &processes_list)) {
-        return;
-    }
 
     for(int i = 0; i < vis && (scroll + i) < map->size ; i++) {
 
         const process_data_t* p = &processes_list[scroll + i];
+        if(p->pid == 0) continue;
+
         float rss_mib = (float) p->rss_kb / 1024.0f;
         int row = 6 + i;
 

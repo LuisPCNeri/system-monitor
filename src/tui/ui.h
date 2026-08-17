@@ -1,0 +1,12 @@
+#ifndef __UI_H__
+#define __UI_H__
+
+#include "../proc/mem.h"
+#include "../proc/proc.h"
+
+void tui_init();
+void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int scroll, process_data_t* processes_list);
+int ui_getc();
+void tui_destroy();
+
+#endif

@@ -31,7 +31,7 @@ processes_map_t* create_map(int capacity) {
     if (!map) return NULL;
 
     map->size = 0;
-    map->capacity = FALLBACK_CAPACITY;
+    map->capacity = capacity;
     map->buckets = calloc(capacity, sizeof(process_node_t*));
     if(!map->buckets) return NULL;
 
@@ -83,7 +83,7 @@ size_t get_all_processes(processes_map_t* m, process_data_t** out) {
     }
 
     *out = (process_data_t*) malloc(m->size * sizeof(process_data_t));
-    if(!out) return 0;
+    if(!*out) return 0;
 
     size_t idx = 0;
     for(int i = 0; i < m->capacity; i++) {
@@ -113,7 +113,7 @@ void filter_map(processes_map_t* map, FilterFunc cond) {
                 map->size--;
             }
             else {
-                *cur = entry->next;
+                cur = &entry->next;
             }
         }
     }
