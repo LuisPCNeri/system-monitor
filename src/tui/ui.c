@@ -108,7 +108,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
 
     attron(A_BOLD | COLOR_PAIR(CP_DIM));
-    mvprintw(4, 0, " %7s %-20s %7s %10s %9s %5s", "PID", "NAME", "CPU %", "RSS", "PSS", "S");
+    mvprintw(4, 0, " %7s %-20s %7s %11s %10s %8s", "PID", "NAME", "CPU %", "RSS", "PSS", "S");
     attroff(A_BOLD | COLOR_PAIR(CP_DIM));
     mvhline(5, 0, ACS_HLINE, cols);
 
@@ -120,21 +120,37 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
         const process_data_t* p = &processes_list[scroll + i];
         if(p->pid == 0) continue;
 
-        float rss_mib = (float) p->rss_kb / 1024.0f;
-        float pss_mib = (float) p->pss_kb / 1024.0f;
+        float rss = (float) p->rss_kb / 1024.0f;
+        float pss = (float) p->pss_kb / 1024.0f;
         int row = 6 + i;
 
         int cpu_pair = CP_NORMAL;
         if      (p->cpu_pct > 50.0f) cpu_pair = CP_CRIT;
         else if (p->cpu_pct > 20.0f) cpu_pair = CP_WARN;
 
-        mvprintw(row, 0, " %7d %-20.20s  ", p->pid, p->name);
+        mvprintw(row, 0, " %7d %-20.20s ", p->pid, p->name);
 
         attron(COLOR_PAIR(cpu_pair));
-        printw("%6.1f%%", p->cpu_pct);
+        printw("%5.1f%%", p->cpu_pct);
         attroff(COLOR_PAIR(cpu_pair));
 
-        printw(" %9.1f %9.1f %6c", rss_mib, pss_mib, p->state);
+        char unit_rss[8] = "MiB";
+        char unit_pss[8] = "MiB";
+
+        if(rss <= 0) {
+            rss = p->rss_kb;
+            sprintf(unit_rss, "kB");
+        }
+        if(pss <= 0) {
+            pss = p->pss_kb;
+            sprintf(unit_pss, "kB");
+        }
+
+        char rss_block[24], pss_block[24];
+        snprintf(rss_block, sizeof rss_block, "%.1f %s", rss, unit_rss);
+        snprintf(pss_block, sizeof pss_block, "%.1f %s", pss, unit_pss);
+
+        printw(" %12s %11s %7c", rss_block, pss_block, p->state);
     }
 
 

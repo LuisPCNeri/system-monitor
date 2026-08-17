@@ -80,7 +80,7 @@ int main(void) {
         clock_gettime(CLOCK_MONOTONIC, &t1);
         long elapsed = (t1.tv_sec - t0.tv_sec) * 1000 + (t1.tv_nsec - t0.tv_nsec) / 1000000;
 
-        if(is_starting || elapsed >= 500) {
+        if(is_starting || elapsed >= 250) {
             is_starting = 0;
             t0 = t1;
 
@@ -172,7 +172,10 @@ int main(void) {
                 }
             }
 
-            if(should_exit_early) break;
+            if(should_exit_early) {
+                tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode);
+                break;
+            }
         }
 
         sleep_ms(16);
