@@ -76,6 +76,29 @@ static int read_rss(process_data_t* p) {
     return 0;
 }
 
+static int read_pss(process_data_t* p) {
+    char path[64];
+    snprintf(path, sizeof(path), "/proc/%d/smaps_rollup", p->pid);
+
+    FILE* f = fopen(path, "r");
+    if(!f) return -1;
+
+    char line[256];
+    long pss_kb = -1;
+
+    while(fgets(line, sizeof(line), f)) {
+        if(strncmp(line, "Pss:", 4) == 0) {
+            sscanf(line, "Pss: %ld kB", &pss_kb);
+            break;
+        }
+    }
+
+    p->pss_kb = pss_kb == -1 ? 0 : pss_kb;
+
+    fclose(f);
+    return 0;
+}
+
 void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
     cur_gen++;
 
@@ -99,6 +122,7 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
 
         if (read_stat(&p) < 0) continue;
         read_rss(&p);
+        read_pss(&p);
 
         process_data_t* existing = get_process(m, pid);
         if(existing) {

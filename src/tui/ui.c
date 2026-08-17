@@ -95,7 +95,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int 
 
 
     attron(A_BOLD | COLOR_PAIR(CP_DIM));
-    mvprintw(4, 0, " %7s %-20s %7s %10s %s", "PID", "NAME", "CPU %", "MEM (MiB)", "S");
+    mvprintw(4, 0, " %7s %-20s %7s %10s %9s %5s", "PID", "NAME", "CPU %", "RSS", "PSS", "S");
     attroff(A_BOLD | COLOR_PAIR(CP_DIM));
     mvhline(5, 0, ACS_HLINE, cols);
 
@@ -108,6 +108,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int 
         if(p->pid == 0) continue;
 
         float rss_mib = (float) p->rss_kb / 1024.0f;
+        float pss_mib = (float) p->pss_kb / 1024.0f;
         int row = 6 + i;
 
         int cpu_pair = CP_NORMAL;
@@ -120,7 +121,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, processes_map_t* map, int 
         printw("%6.1f%%", p->cpu_pct);
         attroff(COLOR_PAIR(cpu_pair));
 
-        printw(" %9.1f %c", rss_mib, p->state);
+        printw(" %9.1f %9.1f %6c", rss_mib, pss_mib, p->state);
     }
 
 
