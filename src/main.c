@@ -51,6 +51,8 @@ int main(void) {
     CpuStat cpu_a, cpu_b;
     mem_info_t mem;
 
+
+    int cursor  = 0;
     int scroll  = 0;
     int sort_by = 0;
 
@@ -70,6 +72,9 @@ int main(void) {
     process_data_t* list = NULL;
     size_t count = 0;
     float cpu_pct = 0.0f;
+
+    int rows = getmaxy(stdscr);
+    int visible_rows = rows - 7;
 
     while (g_running) {
         if (g_resized) {
@@ -134,10 +139,12 @@ int main(void) {
                     mode = MODE_SEARCH;
                     break;
                 case KEY_UP:
-                    if (scroll > 0) scroll--;
+                    if (cursor > 0) cursor--;
+                    if (cursor < scroll) scroll = cursor;
                     break;
                 case KEY_DOWN:
-                    if (scroll < max_scroll) scroll++;
+                    if (cursor < (int) count - 1) cursor++;
+                    if (cursor >= scroll + visible_rows) scroll = cursor -visible_rows + 1;
                     break;
                 case KEY_PPAGE:
                     scroll -= 10;
@@ -182,7 +189,7 @@ int main(void) {
             if (scroll > max_scroll) scroll = max_scroll;
         }
 
-        if(list) tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode);
+        if(list) tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor);
         sleep_ms(16);
     }
 

@@ -6,11 +6,12 @@
 #include "../proc/mem.h"
 #include "../utils/hmap.h"
 
-#define CP_NORMAL 1
-#define CP_WARN   2
-#define CP_CRIT   3
-#define CP_HEADER 4
-#define CP_DIM    5
+#define CP_NORMAL   1
+#define CP_WARN     2
+#define CP_CRIT     3
+#define CP_HEADER   4
+#define CP_DIM      5
+#define CP_SELECTED 6
 
 void tui_init() {
     initscr();
@@ -24,11 +25,12 @@ void tui_init() {
         start_color();
         use_default_colors();
 
-        init_pair(CP_NORMAL, COLOR_GREEN,  -1);
-        init_pair(CP_WARN,   COLOR_YELLOW, -1);
-        init_pair(CP_CRIT,   COLOR_RED,    -1);
-        init_pair(CP_HEADER, COLOR_CYAN,   -1);
-        init_pair(CP_DIM,    COLOR_WHITE,  -1);
+        init_pair(CP_NORMAL,   COLOR_GREEN,  -1);
+        init_pair(CP_WARN,     COLOR_YELLOW, -1);
+        init_pair(CP_CRIT,     COLOR_RED,    -1);
+        init_pair(CP_HEADER,   COLOR_CYAN,   -1);
+        init_pair(CP_DIM,      COLOR_WHITE,  -1);
+        init_pair(CP_SELECTED, COLOR_BLACK,  COLOR_CYAN);
     }
 }
 
@@ -62,7 +64,7 @@ static void draw_bar(int y, int x, int w, float pct, const char* suffix) {
 }
 
 void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t* processes_list, 
-                size_t count, const char* search, int app_mode) {
+                size_t count, const char* search, int app_mode, int cursor) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
 
@@ -124,15 +126,23 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
         float pss = (float) p->pss_kb / 1024.0f;
         int row = 6 + i;
 
+        int is_selected = (scroll + i) == cursor;
+        if (is_selected) {
+            attron(COLOR_PAIR(CP_SELECTED) | A_BOLD);
+            mvhline(row, 0, ' ', cols);
+        }
+
         int cpu_pair = CP_NORMAL;
-        if      (p->cpu_pct > 50.0f) cpu_pair = CP_CRIT;
-        else if (p->cpu_pct > 20.0f) cpu_pair = CP_WARN;
+        if (!is_selected) {
+            if      (p->cpu_pct > 50.0f) cpu_pair = CP_CRIT;
+            else if (p->cpu_pct > 20.0f) cpu_pair = CP_WARN;
+        }
 
         mvprintw(row, 0, " %7d %-20.20s ", p->pid, p->name);
 
-        attron(COLOR_PAIR(cpu_pair));
+        if (!is_selected) attron(COLOR_PAIR(cpu_pair));
         printw("%5.1f%%", p->cpu_pct);
-        attroff(COLOR_PAIR(cpu_pair));
+        if (!is_selected) attroff(COLOR_PAIR(cpu_pair));
 
         char unit_rss[8] = "MiB";
         char unit_pss[8] = "MiB";
@@ -151,6 +161,8 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
         snprintf(pss_block, sizeof pss_block, "%.1f %s", pss, unit_pss);
 
         printw(" %12s %11s %7c", rss_block, pss_block, p->state);
+
+        if (is_selected) attroff(COLOR_PAIR(CP_SELECTED) | A_BOLD);
     }
 
 
