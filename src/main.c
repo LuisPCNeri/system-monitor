@@ -138,10 +138,16 @@ int main(void) {
                 case 's': case 'S': case 'f': case 'F':
                     mode = MODE_SEARCH;
                     break;
-                    case 'k': case 'K':
+                case 'k': case 'K':
                     if(cursor >= 0 && cursor < (int) count) {
                         process_data_t* p = &list[cursor];
                         kill_process(p->pid);
+                    }
+                    break;
+                    case 't': case 'T': case KEY_DC:
+                    if(cursor >= 0 && cursor < (int) count) {
+                        process_data_t* p = &list[cursor];
+                        kill(p->pid, SIGTERM);
                     }
                     break;
                 case KEY_UP:
