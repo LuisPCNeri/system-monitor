@@ -59,11 +59,17 @@ int main(void) {
     int search_len       = 0;
 
     cpu_read(&cpu_a);
-    sleep_ms(500);
 
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
+    t0.tv_sec -= 1;
+
     int is_starting = 1;
+
+    int max_scroll = 0;
+    process_data_t* list = NULL;
+    size_t count = 0;
+    float cpu_pct = 0.0f;
 
     while (g_running) {
         if (g_resized) {
@@ -72,15 +78,13 @@ int main(void) {
             refresh();
         }
 
-        int max_scroll = 0;
-        process_data_t* list = NULL;
-        size_t count = 0;
-        float cpu_pct = 0.0f;
 
         clock_gettime(CLOCK_MONOTONIC, &t1);
         long elapsed = (t1.tv_sec - t0.tv_sec) * 1000 + (t1.tv_nsec - t0.tv_nsec) / 1000000;
 
-        if(is_starting || elapsed >= 250) {
+        int need_refilter = 0;
+
+        if(is_starting || elapsed >= 500) {
             is_starting = 0;
             t0 = t1;
 
@@ -92,30 +96,10 @@ int main(void) {
             mem_read(&mem);
 
             refresh_processes(map, cpu_delta);
-            count = get_all_processes(map, &list);
-
-            if(search_len > 0) {
-                size_t out = 0;
-                for(size_t i = 0; i < count; i++) {
-                    if(strcasestr(list[i].name, search_buf)) {
-                        list[out++] = list[i];
-                    }
-                }
-
-                count = out;
-            }
-
-            qsort(list, count, sizeof(process_data_t),
-                  sort_by == 0 ? proc_cmp_cpu : proc_cmp_mem);
-
-            max_scroll = map->size > 0 ? map->size - 1 : 0;
-            if (scroll > max_scroll) scroll = max_scroll;
-
-            tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode);
+            need_refilter = 1;
         }
 
         int ch;
-        int should_exit_early = 0;
         while ((ch = ui_getc()) != ERR) {
 
             if(mode == MODE_SEARCH) {
@@ -125,7 +109,7 @@ int main(void) {
                     search_len = 0;
                     mode = MODE_NORMAL;
                     scroll = 0;
-                    should_exit_early = 1;
+                    need_refilter = 1;
                 }
                 else if(ch == '\n') {
                     mode = MODE_NORMAL;
@@ -133,12 +117,12 @@ int main(void) {
                 }
                 else if(ch == KEY_BACKSPACE || ch == 127 || ch == '\b') {
                     if(search_len > 0) search_buf[--search_len] = '\0';
-                    should_exit_early = 1;
+                    need_refilter = 1;
                 }
                 else if (ch >= 32 && ch <= 127 && search_len < 255) {
                     search_buf[search_len++] = (char) ch;
                     search_buf[search_len]   = '\0';
-                    should_exit_early = 1;
+                    need_refilter = 1;
                 }
             }
             else {
@@ -158,10 +142,12 @@ int main(void) {
                 case KEY_PPAGE:
                     scroll -= 10;
                     if (scroll < 0) scroll = 0;
+
                     break;
                 case KEY_NPAGE:
                     scroll += 10;
                     if (scroll > max_scroll) scroll = max_scroll;
+
                     break;
                 case 'c': case 'C':
                     sort_by = 0;
@@ -171,17 +157,36 @@ int main(void) {
                     break;
                 }
             }
-
-            if(should_exit_early) {
-                tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode);
-                break;
-            }
         }
 
+
+        if(need_refilter) {
+            free(list);
+            count = get_all_processes(map, &list);
+
+            if(search_len > 0) {
+                size_t out = 0;
+                for(size_t i = 0; i < count; i++) {
+                    if(strcasestr(list[i].name, search_buf)) {
+                        list[out++] = list[i];
+                    }
+                }
+
+                count = out;
+            }
+
+            qsort(list, count, sizeof(process_data_t),
+                  sort_by == 0 ? proc_cmp_cpu : proc_cmp_mem);
+
+            max_scroll = map->size > 0 ? map->size - 1 : 0;
+            if (scroll > max_scroll) scroll = max_scroll;
+        }
+
+        if(list) tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode);
         sleep_ms(16);
-        free(list);
     }
 
+    if(list) free(list);
     tui_destroy();
     free_processes_map(map);
     return 0;
