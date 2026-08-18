@@ -168,7 +168,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
     attron(COLOR_PAIR(CP_DIM));
     mvprintw(rows - 1, 0,
-         " [q]uit  [↑/↓] scroll  [c] sort CPU  [m] sort RAM  [k]ill process");
+         " [q]uit  [UP/DOWN] scroll  [c] sort CPU  [m] sort RAM  [k]ill process");
     attroff(COLOR_PAIR(CP_DIM));
 
     refresh();
