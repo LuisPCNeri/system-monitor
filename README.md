@@ -8,7 +8,8 @@ A lightweight terminal system monitor for Linux, written in C with ncurses.
 - Live process table (PID, name, CPU %, RSS, PSS, state)
 - Sort processes by CPU (`c`) or memory (`m`)
 - Search/filter processes by name (`s` / `f`)
-- Scrollable process list
+- Scrollable process list with a highlighted selection
+- Terminate the selected process (`k`)
 - Colors indicate load: green (normal), yellow (warning), red (critical)
 - Data sourced directly from `/proc`
 
@@ -16,11 +17,21 @@ A lightweight terminal system monitor for Linux, written in C with ncurses.
 
 - Linux with a `/proc` filesystem
 - gcc
-- ncurses dev library (e.g. `libncurses-dev` on Debian/Ubuntu)
+- A local ncurses build for the static binary (see [Build](#build)), or the system ncurses dev library (e.g. `libncurses-dev` on Debian/Ubuntu) for `make shared`
+
+## Install
+
+Prebuilt binaries are available in the [GitHub Releases](https://github.com/LuisPCNeri/system-monitor/releases).
 
 ## Build
 
+The default `make` target produces a self-contained static binary, linked against a locally built ncurses. The Makefile expects that build at `$(HOME)/built_pckgs/ncurses-6.4` — adjust `NCURSES_DIR` at the top of the Makefile if yours lives elsewhere.
+
     make
+
+For a smaller binary that links against the system's ncurses shared library instead:
+
+    make shared
 
 ## Usage
 
@@ -31,13 +42,14 @@ A lightweight terminal system monitor for Linux, written in C with ncurses.
 | Key | Action |
 |-----|--------|
 | q | Quit |
-| ↑ / ↓ | Scroll process list |
+| UP / DOWN | Move selection / scroll process list |
 | PgUp / PgDn | Scroll by 10 lines |
 | s / f | Enter search mode |
 | Esc | Cancel search |
 | Enter | Confirm search |
 | c | Sort by CPU % |
 | m | Sort by RAM usage |
+| k | Terminate selected process |
 
 ## Project layout
 
