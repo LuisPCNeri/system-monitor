@@ -97,7 +97,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
     draw_bar(2, 5, bar_w, ram_pct, ram_suffix);
 
 
-    if(search && app_mode == 1) {
+    if( (search && search[0] != '\0') || (search[0] == '\0' && app_mode == 1)) {
         attron(COLOR_PAIR(CP_WARN));
         mvprintw(3, 1, "Search: %s |", search);
         attroff(COLOR_PAIR(CP_WARN));
@@ -168,7 +168,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
     attron(COLOR_PAIR(CP_DIM));
     mvprintw(rows - 1, 0,
-         " [q]uit  [↑/↓] scroll  [c] sort CPU  [m] sort RAM");
+         " [q]uit  [↑/↓] scroll  [c] sort CPU  [m] sort RAM  [k]ill process");
     attroff(COLOR_PAIR(CP_DIM));
 
     refresh();

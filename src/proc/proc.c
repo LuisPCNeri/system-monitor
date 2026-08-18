@@ -1,5 +1,6 @@
 #include "proc.h"
 
+#include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -143,6 +144,10 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
 
     closedir(dir);
     filter_map(m, cond);
+}
+
+void kill_process(pid_t pid) {
+    kill(pid, SIGKILL);
 }
 
 int proc_cmp_cpu(const void *a, const void *b) {

@@ -138,6 +138,12 @@ int main(void) {
                 case 's': case 'S': case 'f': case 'F':
                     mode = MODE_SEARCH;
                     break;
+                    case 'k': case 'K':
+                    if(cursor >= 0 && cursor < (int) count) {
+                        process_data_t* p = &list[cursor];
+                        kill_process(p->pid);
+                    }
+                    break;
                 case KEY_UP:
                     if (cursor > 0) cursor--;
                     if (cursor < scroll) scroll = cursor;
