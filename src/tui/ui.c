@@ -1,6 +1,7 @@
 #include <ncurses.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "ui.h"
 #include "../proc/mem.h"
@@ -64,27 +65,38 @@ static void draw_bar(int y, int x, int w, float pct, const char* suffix) {
 }
 
 void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t* processes_list, 
-                size_t count, const char* search, int app_mode, int cursor) {
+                size_t count, const char* search, int app_mode, int cursor, float cpu_temp, float gpu_temp) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
 
     erase();
 
+    int bar_w = (cols / 2) - 14;
+    if (bar_w < 10) bar_w = 10;
+
     attron(COLOR_PAIR(CP_HEADER) | A_BOLD);
     mvprintw(0, 0, " sysmon");
     attroff(COLOR_PAIR(CP_HEADER) | A_BOLD);
 
-
     char cpu_suffix[32];
-    snprintf(cpu_suffix, sizeof(cpu_suffix), "%.1f%%", cpu_pct);
 
-    int bar_w = (cols / 2) - 14;
-    if (bar_w < 10) bar_w = 10;
+    snprintf(cpu_suffix, sizeof(cpu_suffix), "%.1f%%", cpu_pct);
 
     attron(COLOR_PAIR(CP_DIM));
     mvaddstr(1, 1, "CPU ");
     attroff(COLOR_PAIR(CP_DIM));
     draw_bar(1, 5, bar_w, cpu_pct, cpu_suffix);
+
+    if (cpu_temp >= 0.0f) {
+        int temp_pair = CP_NORMAL;
+        if      (cpu_temp > 90.0f) temp_pair = CP_CRIT;
+        else if (cpu_temp > 70.0f) temp_pair = CP_WARN;
+
+        int temp_x = 5 + bar_w + 1 + (int)strlen(cpu_suffix) + 1;
+        attron(COLOR_PAIR(temp_pair));
+        mvprintw(1, temp_x, "%.1f°C", cpu_temp);
+        attroff(COLOR_PAIR(temp_pair));
+    }
 
 
     float ram_pct = mem->total_mib > 0 ? 100.0f * (float) mem->used_mib / (float) mem->total_mib : 0.0f;
@@ -95,6 +107,16 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
     mvaddstr(2, 1, "RAM ");
     attroff(COLOR_PAIR(CP_DIM));
     draw_bar(2, 5, bar_w, ram_pct, ram_suffix);
+
+    if(gpu_temp >= 0.0f) {
+
+        char gpu_str[64];
+        snprintf(gpu_str, sizeof(gpu_str), "GPU %.1fºC", gpu_temp);
+
+        attron(COLOR_PAIR(CP_DIM));
+        mvaddstr(3, 1, gpu_str);
+        attroff(COLOR_PAIR(CP_DIM));
+    }
 
 
     if( (search && search[0] != '\0') || (search[0] == '\0' && app_mode == 1)) {
