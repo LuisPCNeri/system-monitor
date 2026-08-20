@@ -95,7 +95,7 @@ int main(void) {
 
         int need_refilter = 0;
 
-        if(is_starting || elapsed >= 500) {
+        if(is_starting || elapsed >= 1500) {
             is_starting = 0;
             t0 = t1;
 

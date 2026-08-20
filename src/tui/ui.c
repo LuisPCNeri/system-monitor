@@ -132,7 +132,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
 
     attron(A_BOLD | COLOR_PAIR(CP_DIM));
-    mvprintw(4, 0, " %7s %-20s %7s %11s %10s %8s", "PID", "NAME", "CPU %", "RSS", "PSS", "S");
+    mvprintw(4, 0, " %7s %7s  %-20s %7s %11s %10s %8s", "PID", "USER", "NAME", "CPU %", "RSS", "PSS", "S");
     attroff(A_BOLD | COLOR_PAIR(CP_DIM));
     mvhline(5, 0, ACS_HLINE, cols);
 
@@ -160,7 +160,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
             else if (p->cpu_pct > 20.0f) cpu_pair = CP_WARN;
         }
 
-        mvprintw(row, 0, " %7d %-20.20s ", p->pid, p->name);
+        mvprintw(row, 0, " %7d %7s  %-20.20s ", p->pid, p->user, p->name);
 
         if (!is_selected) attron(COLOR_PAIR(cpu_pair));
         printw("%5.1f%%", p->cpu_pct);

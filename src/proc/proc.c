@@ -7,6 +7,8 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <ctype.h>
+#include <sys/stat.h>
+#include <pwd.h>
 
 static unsigned long long cur_gen = 0;
 
@@ -100,6 +102,28 @@ static int read_pss(process_data_t* p) {
     return 0;
 }
 
+static int read_process_uid(process_data_t* p) {
+
+    char fpath[64];
+    snprintf(fpath, sizeof(fpath), "/proc/%d", p->pid);
+
+    struct stat s;
+    if(stat(fpath, &s) == 0) {
+        return s.st_uid;
+    };
+
+    return -1;
+}
+
+static char* resolve_user_with_uid(int uid) {
+    if(uid < 0) return NULL;
+
+    struct passwd* pw;
+    pw = getpwuid(uid);
+
+    return pw->pw_name;
+}
+
 void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
     cur_gen++;
 
@@ -124,6 +148,15 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
         if (read_stat(&p) < 0) continue;
         read_rss(&p);
         read_pss(&p);
+
+        int uid = read_process_uid(&p);
+        if( uid >= 0) {
+            char* name = resolve_user_with_uid(uid);
+            if(name) {
+                strncpy(p.user, name, sizeof(name) - 1);
+                p.user[sizeof(p.user) - 1] = '\0';
+            } 
+        }
 
         process_data_t* existing = get_process(m, pid);
         if(existing) {
