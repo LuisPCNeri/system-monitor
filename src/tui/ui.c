@@ -132,7 +132,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
 
     attron(A_BOLD | COLOR_PAIR(CP_DIM));
-    mvprintw(4, 0, " %7s %7s  %-20s %7s %11s %10s %8s", "PID", "USER", "NAME", "CPU %", "RSS", "PSS", "S");
+    mvprintw(4, 0, " %7s %7s  %-20s %7s %9s %11s %10s %8s", "PID", "USER", "NAME", "CPU %", "CORE %", "RSS", "PSS", "S");
     attroff(A_BOLD | COLOR_PAIR(CP_DIM));
     mvhline(5, 0, ACS_HLINE, cols);
 
@@ -160,11 +160,21 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
             else if (p->cpu_pct > 20.0f) cpu_pair = CP_WARN;
         }
 
+        int core_pair = CP_NORMAL;
+        if(!is_selected) {
+            if     (p->irix_cpu_pct > 70.0f) core_pair = CP_CRIT;
+            else if(p->irix_cpu_pct > 50.0f) core_pair = CP_WARN;
+        }
+
         mvprintw(row, 0, " %7d %7s  %-20.20s ", p->pid, p->user, p->name);
 
         if (!is_selected) attron(COLOR_PAIR(cpu_pair));
         printw("%5.1f%%", p->cpu_pct);
         if (!is_selected) attroff(COLOR_PAIR(cpu_pair));
+
+        if (!is_selected) attron(COLOR_PAIR(core_pair));
+        printw("%8.1f%%", p->irix_cpu_pct);
+        if (!is_selected) attroff(COLOR_PAIR(core_pair));
 
         char unit_rss[8] = "MiB";
         char unit_pss[8] = "MiB";

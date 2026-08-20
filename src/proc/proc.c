@@ -162,7 +162,12 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
         if(existing) {
             if(cpu_total_delta > 0) {
                 unsigned long long proc_delta = (p.utime + p.stime) - (existing->utime + existing->stime);
+
+                long num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+
                 p.cpu_pct = 100.0f * (float) proc_delta / (float) cpu_total_delta;
+                p.irix_cpu_pct = (100.0f * (float) proc_delta / (float) cpu_total_delta) * num_cores;
+
             }
 
             *existing = p;

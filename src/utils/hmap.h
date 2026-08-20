@@ -15,6 +15,7 @@ typedef struct process_data_t {
     long rss_kb;
 
     float cpu_pct;
+    float irix_cpu_pct;
 
     unsigned long long utime;
     unsigned long long stime;
