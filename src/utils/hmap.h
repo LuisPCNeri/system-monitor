@@ -6,7 +6,7 @@
 typedef struct process_data_t {
 
     pid_t pid;
-    char user[256];
+    char user[32];
     char name[256];
 
     char state;

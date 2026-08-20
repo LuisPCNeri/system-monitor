@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <sys/stat.h>
 #include <pwd.h>
+#include <stdlib.h>
 
 static unsigned long long cur_gen = 0;
 
@@ -116,12 +117,32 @@ static int read_process_uid(process_data_t* p) {
 }
 
 static char* resolve_user_with_uid(int uid) {
-    if(uid < 0) return NULL;
 
-    struct passwd* pw;
-    pw = getpwuid(uid);
+    static char uname[32];
+    FILE *f = fopen("/etc/passwd", "r");
+    if (!f) return NULL;
 
-    return pw->pw_name;
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+        char *colon1 = strchr(line, ':');
+        if (!colon1) continue;
+        char *colon2 = strchr(colon1 + 1, ':');
+        if (!colon2) continue;
+
+        if (atoi(colon2 + 1) == uid) {
+            size_t len = colon1 - line;
+            if (len >= sizeof(uname)) len = sizeof(uname) - 1;
+
+            memcpy(uname, line, len);
+            uname[len] = '\0';
+
+            fclose(f);
+            return uname;
+        }
+    }
+
+    fclose(f);
+    return NULL;
 }
 
 void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
@@ -152,10 +173,7 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
         int uid = read_process_uid(&p);
         if( uid >= 0) {
             char* name = resolve_user_with_uid(uid);
-            if(name) {
-                strncpy(p.user, name, sizeof(name) - 1);
-                p.user[sizeof(p.user) - 1] = '\0';
-            } 
+            if(name) snprintf(p.user, sizeof(p.user), "%s", name);
         }
 
         process_data_t* existing = get_process(m, pid);
