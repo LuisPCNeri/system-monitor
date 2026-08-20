@@ -101,7 +101,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
     float ram_pct = mem->total_mib > 0 ? 100.0f * (float) mem->used_mib / (float) mem->total_mib : 0.0f;
     char ram_suffix[64];
-    snprintf(ram_suffix, sizeof(ram_suffix), "%ld / %ld MiB", mem->used_mib, mem->total_mib);
+    snprintf(ram_suffix, sizeof(ram_suffix), "%.2f / %.2f GiB", (float) mem->used_mib / 1024.0f, (float) mem->total_mib / 1024.0f);
 
     attron(COLOR_PAIR(CP_DIM));
     mvaddstr(2, 1, "RAM ");
