@@ -179,7 +179,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
         mvprintw(row, 0, " %7d %7s  %-20.20s ", p->pid, p->user, p->name);
 
         if (!is_selected) attron(COLOR_PAIR(cpu_pair)  | cpu_attr);
-        printw("%5.2f%%", p->cpu_pct);
+        printw("%6.2f%%", p->cpu_pct);
         if (!is_selected) attroff(COLOR_PAIR(cpu_pair) | cpu_attr);
 
         if (!is_selected) attron(COLOR_PAIR(core_pair)  | core_attr);
