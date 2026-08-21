@@ -14,8 +14,21 @@ typedef struct {
     unsigned long long steal;
 } CpuStat;
 
-int cpu_read(CpuStat *out);
-float cpu_usage(CpuStat *prev, CpuStat *curr);
-unsigned long long cpu_total_delta(CpuStat *prev, CpuStat *curr);
+/*
+ *  \brief Reads /proc/stat to get the cpu data.
+ *  \param out A pointer to a CpuStat struct to store the data.
+ *  \returns 0 on success 1 on failure.
+ * */
+int cpu_read(CpuStat* out);
+
+/*
+ *  \brief Calculates the cpu usage pct based on two different CpuStat structs sepparated by a time difference.
+ *  \param prev Old CpuStat data.
+ *  \param curr Newer CpyStat data.
+ *  \returns The current cpu usage pct.
+ * */
+float cpu_usage(CpuStat* prev, CpuStat* curr);
+
+unsigned long long cpu_total_delta(CpuStat* prev, CpuStat* curr);
 
 #endif

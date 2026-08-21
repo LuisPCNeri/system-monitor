@@ -35,13 +35,47 @@ typedef struct processes_map_t {
 
 typedef int (*FilterFunc)(process_data_t* data);
 
-
+/*
+ *  \brief Initializes an empty map struct with the given capacity or 100 if capacity was invalid.
+ *  \param capacity Number of buckets in the hashmap
+ *  \returns A proccesses_map_t* or NULL if there was an error.
+ * */
 processes_map_t* create_map(int capacity);
+
+/*
+ *  \brief Inserts a processes data into the process map.
+ *  \param m The process map where to put the new data.
+ *  \param data The data to insert in the map.
+ * */
 void insert_proc(processes_map_t* m, process_data_t data);
+
+/*
+ *  \brief Gets the process with pid from the processes map.
+ *  \param m The map to search.
+ *  \param pid The pid of the wanted process.
+ *  \returns A pointer to the requested process' data or NULL if it was not found.
+ * */
 process_data_t* get_process(processes_map_t* m, pid_t pid);
+
+/*
+ *  \brief Transforms the map into a list containing all of the processes in the map.
+ *  \param m The map to convert.
+ *  \param out A pointer to a process_data_t pointer to store the list.
+ *  \returns The size of the list, or 0 if the size is 0 or **out is an invalid pointer.
+ * */
 size_t get_all_processes(processes_map_t* m, process_data_t** out);
+
+/*
+ *  \brief Frees the memory taken by the map.
+ *  \param m The map to free.
+ * */
 void free_processes_map(processes_map_t* m);
 
+/*
+ *  \brief Filters the map by removing all entries that do not conform with the condition passed as a parameter.
+ *  \param map The map to filter.
+ *  \param cond The condition to apply to all map entries, this condition must result in an intenger, for example p.pid > 100 
+ * */
 void filter_map(processes_map_t* map, FilterFunc cond);
 
 #endif
