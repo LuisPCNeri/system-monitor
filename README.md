@@ -4,14 +4,17 @@ A lightweight terminal system monitor for Linux, written in C with ncurses.
 
 ## Features
 
-- Real-time CPU and RAM usage bars with color-coded load levels
-- Live process table (PID, name, CPU %, RSS, PSS, state)
+- Real-time CPU, RAM and swap usage bars with color-coded load levels
+- System uptime and 5-minute average CPU load in the header
+- CPU temperature display, plus GPU temperature when available (AMD/Intel GPUs via hwmon; NVIDIA proprietary drivers are not supported)
+- Live process table (PID, name, CPU %, per-core CPU %, RSS, PSS, state, user)
 - Sort processes by CPU (`c`) or memory (`m`)
 - Search/filter processes by name (`s` / `f`)
 - Scrollable process list with a highlighted selection
-- Terminate the selected process (`k`)
+- Kill the selected process forcefully (`k`, SIGKILL) or terminate it cleanly (`t` / `Del`, SIGTERM)
+- Idle processes (0% CPU) are dimmed to reduce visual fatigue
 - Colors indicate load: green (normal), yellow (warning), red (critical)
-- Data sourced directly from `/proc`
+- Data sourced directly from `/proc` and `/sys`
 
 ## Requirements
 
@@ -49,12 +52,14 @@ For a smaller binary that links against the system's ncurses shared library inst
 | Enter | Confirm search |
 | c | Sort by CPU % |
 | m | Sort by RAM usage |
-| k | Terminate selected process |
+| k | Kill selected process (SIGKILL) |
+| t / Del | Terminate selected process (SIGTERM) |
 
 ## Project layout
 
 - `src/main.c` — entry point, main loop, input handling
 - `src/proc/` — `/proc` data readers (`cpu.c`, `mem.c`, `proc.c`)
+- `src/hw/` — hardware monitoring and system stats (`hw.c`, `system_stats.c`): CPU/GPU temperatures, uptime, load average
 - `src/tui/` — ncurses interface (`ui.c`)
 - `src/utils/` — hash map used to track processes (`hmap.c`)
 
