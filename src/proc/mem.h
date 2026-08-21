@@ -6,6 +6,9 @@ typedef struct mem_info_t {
     long used_kb;
     long total_mib;
     long used_mib;
+
+    long swap_total;
+    long swap_used;
 } mem_info_t;
 
 /*
