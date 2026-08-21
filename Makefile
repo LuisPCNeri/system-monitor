@@ -8,7 +8,7 @@ LDFLAGS_STATIC = -static -L$(NCURSES_DIR)/lib -lncurses -ltinfo
 LDFLAGS_SHARED = -lncurses
 
 SRCS    = src/main.c src/proc/cpu.c src/proc/mem.c src/proc/proc.c \
-          src/tui/ui.c src/utils/hmap.c src/hw/hw.c
+          src/tui/ui.c src/utils/hmap.c src/hw/hw.c src/hw/system_stats.c
 OBJS    = $(SRCS:.c=.o)
 TARGET  = sysmon
 

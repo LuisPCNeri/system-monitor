@@ -14,6 +14,7 @@
 #include "tui/ui.h"
 #include "utils/hmap.h"
 #include "hw/hw.h"
+#include "hw/system_stats.h"
 
 static volatile sig_atomic_t g_running = 1;
 static volatile sig_atomic_t g_resized = 0;
@@ -58,6 +59,8 @@ int main(void) {
     mem_info_t mem;
 
 
+    float uptime = 0.0f, load_avg = 0.0f;
+
     int cursor  = 0;
     int scroll  = 0;
     int sort_by = 0;
@@ -80,7 +83,7 @@ int main(void) {
     float cpu_pct = 0.0f;
 
     int rows = getmaxy(stdscr);
-    int visible_rows = rows - 7;
+    int visible_rows = rows - 9;
 
     while (g_running) {
         if (g_resized) {
@@ -101,6 +104,9 @@ int main(void) {
 
             cpu_temp = read_cpu_temp(hw);
             gpu_temp = read_gpu_temp(hw);
+
+            uptime   = read_system_uptime_sec();
+            load_avg = read_system_avg_load_5();
 
             cpu_read(&cpu_b);
             unsigned long long cpu_delta = cpu_total_delta(&cpu_a, &cpu_b);
@@ -165,16 +171,18 @@ int main(void) {
                     break;
                 case KEY_DOWN:
                     if (cursor < (int) count - 1) cursor++;
-                    if (cursor >= scroll + visible_rows) scroll = cursor -visible_rows + 1;
+                    if (cursor >= scroll + visible_rows) scroll = cursor - visible_rows + 1;
                     break;
                 case KEY_PPAGE:
-                    scroll -= 10;
-                    if (scroll < 0) scroll = 0;
+                    if (cursor > 10) cursor -= 10;
+                    else cursor = 0;
+                    if (cursor < scroll) scroll = cursor;
 
                     break;
                 case KEY_NPAGE:
-                    scroll += 10;
-                    if (scroll > max_scroll) scroll = max_scroll;
+                    if (cursor < (int) count - 10) cursor += 10;
+                    else cursor = (int) count - 1;
+                    if (cursor >= scroll + visible_rows - 10) scroll = cursor - visible_rows + 1;
 
                     break;
                 case 'c': case 'C':
@@ -210,7 +218,8 @@ int main(void) {
             if (scroll > max_scroll) scroll = max_scroll;
         }
 
-        if(list) tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor, cpu_temp, gpu_temp);
+        if(list) tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor, cpu_temp, gpu_temp,
+                            uptime, load_avg);
         sleep_ms(16);
     }
 
