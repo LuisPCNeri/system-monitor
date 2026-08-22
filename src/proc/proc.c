@@ -168,7 +168,6 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
 
         if (read_stat(&p) < 0) continue;
         read_rss(&p);
-        read_pss(&p);
 
         int uid = read_process_uid(&p);
         if( uid >= 0) {
@@ -177,6 +176,10 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
         }
 
         process_data_t* existing = get_process(m, pid);
+
+        if(cur_gen == 1 || cur_gen % 5 == 0) read_pss(&p);
+        else p.pss_kb = existing ? existing->pss_kb : 0;
+
         if(existing) {
             if(cpu_total_delta > 0) {
                 unsigned long long proc_delta = (p.utime + p.stime) - (existing->utime + existing->stime);

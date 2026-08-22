@@ -99,7 +99,7 @@ int main(void) {
         clock_gettime(CLOCK_MONOTONIC, &t1);
         long elapsed = (t1.tv_sec - t0.tv_sec) * 1000 + (t1.tv_nsec - t0.tv_nsec) / 1000000;
 
-        int need_refilter = 0;
+        int need_refilter = 0, need_redraw = 0;
 
         if(is_starting || elapsed >= 1500) {
             is_starting = 0;
@@ -156,44 +156,57 @@ int main(void) {
                     break;
                 case 's': case 'S': case 'f': case 'F':
                     mode = MODE_SEARCH;
+                    need_redraw = 1;
                     break;
                 case 'k': case 'K':
                     if(cursor >= 0 && cursor < (int) count) {
                         process_data_t* p = &list[cursor];
                         kill_process(p->pid);
                     }
+
+                    need_redraw = 1;
                     break;
                     case 't': case 'T': case KEY_DC:
                     if(cursor >= 0 && cursor < (int) count) {
                         process_data_t* p = &list[cursor];
                         kill(p->pid, SIGTERM);
                     }
+
+                    need_redraw = 1;
                     break;
                 case KEY_UP:
                     if (cursor > 0) cursor--;
                     if (cursor < scroll) scroll = cursor;
+
+                    need_redraw = 1;
                     break;
                 case KEY_DOWN:
                     if (cursor < (int) count - 1) cursor++;
                     if (cursor >= scroll + visible_rows) scroll = cursor - visible_rows + 1;
+
+                    need_redraw = 1;
                     break;
                 case KEY_PPAGE:
                     if (cursor > 10) cursor -= 10;
                     else cursor = 0;
                     if (cursor < scroll) scroll = cursor;
 
+                    need_redraw = 1;
                     break;
                 case KEY_NPAGE:
                     if (cursor < (int) count - 10) cursor += 10;
                     else cursor = (int) count - 1;
                     if (cursor >= scroll + visible_rows - 10) scroll = cursor - visible_rows + 1;
 
+                    need_redraw = 1;
                     break;
                 case 'c': case 'C':
                     sort_by = 0;
+                    need_redraw = 1;
                     break;
                 case 'm': case 'M':
                     sort_by = 1;
+                    need_redraw = 1;
                     break;
                 }
             }
@@ -222,8 +235,10 @@ int main(void) {
             if (scroll > max_scroll) scroll = max_scroll;
         }
 
-        if(list) tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor, cpu_temp, gpu_temp,
-                            uptime, load_avg, (float) power_draw);
+        if( (need_redraw || need_refilter) && list) 
+            tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor, cpu_temp, gpu_temp,
+                        uptime, load_avg, (float) power_draw);
+
         sleep_ms(16);
     }
 
