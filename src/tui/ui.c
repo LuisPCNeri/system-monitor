@@ -66,7 +66,7 @@ static void draw_bar(int y, int x, int w, float pct, const char* suffix) {
 
 void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t* processes_list, 
                 size_t count, const char* search, int app_mode, int cursor, float cpu_temp, float gpu_temp,
-                float uptime, float avg_load) {
+                float uptime, float avg_load, float power_draw) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
 
@@ -82,16 +82,18 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
     attroff(COLOR_PAIR(CP_HEADER) | A_BOLD);
 
     attron(COLOR_PAIR(CP_DIM)  | A_DIM);
+    if(power_draw < 0) power_draw = 0;
+
     if(uptime >= 3600) {
         float mins = (int) uptime % 3600;
         mins = mins / 60;
 
         uptime /= 3600;
-        mvprintw(0, 8, "uptime: %.0f hr, %.0f min | 5min cpu avg load: %.2f%%", uptime, mins, avg_load);
+        mvprintw(0, 8, "uptime: %.0f hr, %.0f min | 5min cpu avg load: %.2f%% | power consumption: %.2fW", uptime, mins, avg_load, power_draw);
     }
     else if(uptime >= 60) {
         uptime /= 60;
-        mvprintw(0, 8, "uptime: %.0f min | 5min cpu avg load: %.2f%%", uptime, avg_load);
+        mvprintw(0, 8, "uptime: %.0f min | 5min cpu avg load: %.2f%% | power consumption: %.2fW", uptime, avg_load, power_draw);
     }
     attroff(COLOR_PAIR(CP_DIM) | A_DIM);
 

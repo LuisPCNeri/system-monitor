@@ -14,7 +14,7 @@ void tui_init();
  * */
 void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t* processes_list, 
                 size_t count, const char* search, int app_mode, int cursor, float cpu_temp, float gpu_temp,
-                float uptime, float avg_load);
+                float uptime, float avg_load, float power_draw);
 
 /*
  * \brief Gets the character inputed by the user.

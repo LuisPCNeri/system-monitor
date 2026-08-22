@@ -51,6 +51,9 @@ int main(void) {
     hw_monitor_t* hw = init_hw_monitor();
     if(!hw) return -1;
 
+    system_stats* st = init_st();
+    if(!st) return -1;
+
     float cpu_temp = read_cpu_temp(hw);
     float gpu_temp = read_gpu_temp(hw);
 
@@ -59,7 +62,7 @@ int main(void) {
     mem_info_t mem;
 
 
-    float uptime = 0.0f, load_avg = 0.0f;
+    float uptime = 0.0f, load_avg = 0.0f, power_draw = 0.0f;
 
     int cursor  = 0;
     int scroll  = 0;
@@ -105,8 +108,9 @@ int main(void) {
             cpu_temp = read_cpu_temp(hw);
             gpu_temp = read_gpu_temp(hw);
 
-            uptime   = read_system_uptime_sec();
-            load_avg = read_system_avg_load_5();
+            uptime     = read_system_uptime_sec();
+            load_avg   = read_system_avg_load_5();
+            power_draw = read_power_draw_watts(st);
 
             cpu_read(&cpu_b);
             unsigned long long cpu_delta = cpu_total_delta(&cpu_a, &cpu_b);
@@ -219,7 +223,7 @@ int main(void) {
         }
 
         if(list) tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor, cpu_temp, gpu_temp,
-                            uptime, load_avg);
+                            uptime, load_avg, (float) power_draw);
         sleep_ms(16);
     }
 
