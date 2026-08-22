@@ -17,19 +17,19 @@ int mem_read(mem_info_t *out){
 
         if      (sscanf(line, "SwapTotal: %ld kB", &val) == 1) swap_total = val;
         else if (sscanf(line, "SwapFree: %ld kB", &val)  == 1) swap_avail = val;
-        if (total >= 0 && avail >= 0) break;
+        if (total >= 0 && avail >= 0 && swap_total >= 0 && swap_avail >= 0) break;
     }
 
     fclose(f);
  
     if (total < 0 || avail < 0) return -1;
  
-    out->total_kb  = total;
-    out->used_kb   = total - avail;
-    out->total_mib = total / 1024;
-    out->used_mib  = (total - avail) / 1024;
+    out->total_kb   = total;
+    out->used_kb    = total - avail;
+    out->total_mib  = total / 1024;
+    out->used_mib   = (total - avail) / 1024;
     out->swap_total = swap_total / 1024;
-    out->swap_used = (swap_total - swap_avail) / 1024;
+    out->swap_used  = (swap_total - swap_avail) / 1024;
 
     return 0;
 

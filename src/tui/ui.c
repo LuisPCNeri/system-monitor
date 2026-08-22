@@ -136,7 +136,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
     float swap_pct = mem->swap_total > 0 ? 100.0f * (float) mem->swap_used / (float) mem->swap_total : 0.0f;
     char swap_suffix[64];
-    snprintf(swap_suffix, sizeof(swap_suffix), "%.2f / %.2f GiB", (float) mem->swap_used / 1024.0f, (float) mem->swap_used / 1024.0f);
+    snprintf(swap_suffix, sizeof(swap_suffix), "%.2f / %.2f GiB", (float) mem->swap_used / 1024.0f, (float) mem->swap_total / 1024.0f);
 
     attron(COLOR_PAIR(CP_DIM));
     mvaddstr(3, 1, "SWAP ");
