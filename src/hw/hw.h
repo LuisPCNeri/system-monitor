@@ -12,6 +12,13 @@ typedef struct hw_monitor_t hw_monitor_t;
 hw_monitor_t* init_hw_monitor();
 
 /*
+*   \brief Gets the name of the GPU.
+*   \param hw A pointer to an initialized hw struct.
+*   \returns A char* containing the name of the GPU or NULL.
+* */
+char* get_gpu_name(hw_monitor_t* hw);
+
+/*
  *  \brief Reads the temperature of the cpu.
  *  \param hw An initialized hw_monitor_t pointer.
  *  \returns The cpu temp in ºC or -1.0f if there was an error. 

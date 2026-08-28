@@ -237,7 +237,7 @@ int main(void) {
 
         if( (need_redraw || need_refilter) && list) 
             tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor, cpu_temp, gpu_temp,
-                        uptime, load_avg, (float) power_draw);
+                        get_gpu_name(hw) == NULL ? "UNKWON GPU" : get_gpu_name(hw)  ,uptime, load_avg, (float) power_draw);
 
         sleep_ms(16);
     }

@@ -12,6 +12,8 @@ typedef struct hw_monitor_t {
     int cpu_found;
     int gpu_found;
 
+    char gpu_name[128];
+
 } hw_monitor_t;
 
 static void find_thermal_zones(hw_monitor_t* hw) {
@@ -81,12 +83,69 @@ static void find_hwmon_entries(hw_monitor_t* hw) {
     closedir(d);
 }
 
+void fetch_gpu_name(char* buffer, size_t max_len) {
+
+    snprintf(buffer, max_len, "Unknown GPU");
+ 
+    FILE* f = popen("lspci", "r");
+    if (!f) return;
+
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+
+        if (strstr(line, "VGA") || strstr(line, "3D controller") || strstr(line, "Display")) {
+
+            char* first_colon = strchr(line, ':');
+            if (first_colon) {
+
+                char* second_colon = strchr(first_colon + 1, ':');
+                if (second_colon) {
+
+                    char* name_start = second_colon + 1;
+
+                    char* bracket_start = strchr(name_start, '[');
+                    char* bracket_end = NULL;
+
+                    if (bracket_start) {
+                        bracket_end = strchr(bracket_start + 1, ']');
+                    }
+
+                    if (bracket_start && bracket_end) {
+                        size_t len = bracket_end - (bracket_start + 1);
+                        if (len >= max_len) len = max_len - 1;
+
+                        strncpy(buffer, bracket_start + 1, len);
+                        buffer[len] = '\0';
+                    } else {
+                        while (*name_start == ' ') name_start++;
+                        name_start[strcspn(name_start, "\n")] = '\0';
+                        snprintf(buffer, max_len, "%s", name_start);
+                    }
+
+                    if (!strstr(line, "Intel") && !strstr(line, "Unknown")) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    pclose(f);
+}
+
+char* get_gpu_name(hw_monitor_t* hw) {
+    if(!hw) return NULL;
+    if(hw->gpu_name[0] == '\0' || hw->gpu_name[0] == '\n') return NULL;
+
+    return hw->gpu_name;
+}
+
 hw_monitor_t* init_hw_monitor() {
     hw_monitor_t* hw = (hw_monitor_t*) malloc(sizeof(hw_monitor_t));
 
     find_thermal_zones(hw);
     find_hwmon_entries(hw);
 
+    fetch_gpu_name(hw->gpu_name, sizeof(hw->gpu_name));
     return hw;
 }
 
@@ -104,16 +163,49 @@ float read_cpu_temp(hw_monitor_t* hw) {
     return millideg / 1000.0f;
 }
 
+static int nvidia_smi_available = 1;
+
+/// done using nvidia-smi by spawning a sub process. whilst spawning a subprocess is an expensive task on the cpu, this is ran every 1.5 seconds
+/// and may be done even less frequently. The other option would be breaking my objective with static compilation, that is to be portable
+/// so nvidia-smi will be used in place of dlopen
+static int read_nvidia_gpu_temp(void) {
+    if(!nvidia_smi_available) return -1;
+
+    FILE* f = popen("nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader 2>/dev/null", "r");
+    if(!f) return -1;
+
+    int temp;
+    if(fscanf(f, "%d", &temp) == 1) {
+        pclose(f);
+        return temp;
+    }
+
+    pclose(f);
+    nvidia_smi_available = 0;
+    return -1;
+}
+
 float read_gpu_temp(hw_monitor_t *hw) {
-    if(!hw->gpu_found) return -1.0f;
+    float final_temp = -1.0f;
 
-    FILE* f = fopen(hw->gpu_temp_path, "r");
-    if(!f) return -1.0f;
+    if(hw->gpu_found) {
 
-    int millideg;
-    fscanf(f, "%d", &millideg);
+        FILE* f = fopen(hw->gpu_temp_path, "r");
+        if(f) {
+            int millideg = -1;
+            if(fscanf(f, "%d", &millideg) == 1) {
+                final_temp = (float) millideg / 1000.0f;
+            }
 
-    fclose(f);
+            fclose(f);
+        }
+    }
 
-    return millideg / 1000.0f;
+
+    if(final_temp < 0.0f) {
+        int nvidia_temp = read_nvidia_gpu_temp();
+        if(nvidia_temp >= 0) final_temp = (float) nvidia_temp;
+    }
+
+    return final_temp;
 }

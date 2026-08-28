@@ -65,14 +65,14 @@ static void draw_bar(int y, int x, int w, float pct, const char* suffix) {
 }
 
 void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t* processes_list, 
-                size_t count, const char* search, int app_mode, int cursor, float cpu_temp, float gpu_temp,
+                size_t count, const char* search, int app_mode, int cursor, float cpu_temp, float gpu_temp, char* gpu_name,
                 float uptime, float avg_load, float power_draw) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
 
     erase();
 
-    int bar_w = (cols / 2) - 14;
+    int bar_w = (cols / 2) - 30;
     if (bar_w < 10) bar_w = 10;
 
     /* header bar with app name, system uptime and last 5 min load avg */
@@ -148,13 +148,18 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
     /* if a gpu_temp was recorded gpu temp here */
 
     if(gpu_temp >= 0.0f) {
+        int gpu_pair = CP_NORMAL;
+        if      (gpu_temp >= 85.0f) gpu_pair = CP_CRIT;
+        else if (gpu_temp >= 80.0f) gpu_temp = CP_WARN;
 
-        char gpu_str[64];
-        snprintf(gpu_str, sizeof(gpu_str), "GPU %.1fºC", gpu_temp);
+        mvaddstr(1, (cols / 2), gpu_name);
 
-        attron(COLOR_PAIR(CP_DIM));
-        mvaddstr(4, 1, gpu_str);
-        attroff(COLOR_PAIR(CP_DIM));
+        char gpu_str[16];
+        snprintf(gpu_str, sizeof(gpu_str), "%.1fºC", gpu_temp);
+
+        attron(COLOR_PAIR(gpu_pair));
+        mvaddstr(1, (cols / 2) + strlen(gpu_name) + 2, gpu_str);
+        attroff(COLOR_PAIR(gpu_pair));
     }
 
 
