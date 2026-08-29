@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
+#include <pthread.h>
 
 typedef struct hw_monitor_t {
 
@@ -13,6 +14,7 @@ typedef struct hw_monitor_t {
     int gpu_found;
 
     char gpu_name[128];
+    int gpu_name_ready;
 
 } hw_monitor_t;
 
@@ -132,8 +134,16 @@ void fetch_gpu_name(char* buffer, size_t max_len) {
     pclose(f);
 }
 
+
+static void* fetch_gpu_name_thread(void* arg) {
+    hw_monitor_t* hw = (hw_monitor_t*) arg;
+    fetch_gpu_name(hw->gpu_name, sizeof(hw->gpu_name));
+    hw->gpu_name_ready = 1;
+    return NULL;
+}
+
 char* get_gpu_name(hw_monitor_t* hw) {
-    if(!hw) return NULL;
+    if(!hw || !hw->gpu_name_ready) return NULL;
     if(hw->gpu_name[0] == '\0' || hw->gpu_name[0] == '\n') return NULL;
 
     return hw->gpu_name;
@@ -145,7 +155,11 @@ hw_monitor_t* init_hw_monitor() {
     find_thermal_zones(hw);
     find_hwmon_entries(hw);
 
-    fetch_gpu_name(hw->gpu_name, sizeof(hw->gpu_name));
+    snprintf(hw->gpu_name, sizeof(hw->gpu_name), "...");
+    pthread_t t;
+    pthread_create(&t, NULL, fetch_gpu_name_thread, hw);
+    pthread_detach(t);
+
     return hw;
 }
 
