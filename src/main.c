@@ -202,11 +202,11 @@ int main(void) {
                     break;
                 case 'c': case 'C':
                     sort_by = 0;
-                    need_redraw = 1;
+                    need_refilter = 1;
                     break;
                 case 'm': case 'M':
                     sort_by = 1;
-                    need_redraw = 1;
+                    need_refilter = 1;
                     break;
                 }
             }
@@ -235,7 +235,7 @@ int main(void) {
             if (scroll > max_scroll) scroll = max_scroll;
         }
 
-        if( (need_redraw || need_refilter) && list) 
+        if( (need_redraw || need_refilter) && list)
             tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor, cpu_temp, gpu_temp,
                         get_gpu_name(hw) == NULL ? "UNKNWON GPU" : get_gpu_name(hw)  ,uptime, load_avg, (float) power_draw);
 
