@@ -49,15 +49,31 @@ int main(void) {
     tui_init();
 
     hw_monitor_t* hw = init_hw_monitor();
-    if(!hw) return -1;
+    if(!hw) {
+        tui_destroy();
+        return -1;
+    }
 
     system_stats* st = init_st();
-    if(!st) return -1;
+    if(!st) {
+        free_hw_monitor(hw);
+        tui_destroy();
+
+        return -1;
+    }
 
     float cpu_temp = read_cpu_temp(hw);
     float gpu_temp = read_gpu_temp(hw);
 
     processes_map_t* map = create_map(4096);
+    if(!map) {
+        free_hw_monitor(hw);
+        free_st(st);
+
+        tui_destroy();
+        return -1;
+    }
+
     CpuStat cpu_a, cpu_b;
     mem_info_t mem;
 

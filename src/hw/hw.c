@@ -187,7 +187,7 @@ char* get_gpu_name(hw_monitor_t* hw) {
 }
 
 hw_monitor_t* init_hw_monitor() {
-    hw_monitor_t* hw = (hw_monitor_t*) malloc(sizeof(hw_monitor_t));
+    hw_monitor_t* hw = (hw_monitor_t*) calloc(1, sizeof(hw_monitor_t));
 
     find_thermal_zones(hw);
     find_hwmon_entries(hw);
