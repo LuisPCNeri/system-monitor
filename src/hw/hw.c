@@ -1,5 +1,6 @@
 #include "hw.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
@@ -13,7 +14,7 @@ typedef struct hw_monitor_t {
     int cpu_found;
     int gpu_found;
 
-    char gpu_name[128];
+    char gpu_name[256];
     int gpu_name_ready;
 
 } hw_monitor_t;
@@ -85,61 +86,97 @@ static void find_hwmon_entries(hw_monitor_t* hw) {
     closedir(d);
 }
 
-void fetch_gpu_name(char* buffer, size_t max_len) {
+static void lookup_pci_name(unsigned int vid, unsigned int did, char* out, size_t out_len) {
 
-    snprintf(buffer, max_len, "Unknown GPU");
- 
-    FILE* f = popen("lspci", "r");
-    if (!f) return;
+    const char* paths[] = {
+        "/usr/share/misc/pci.ids",
+        "/usr/share/hwdata/pci.ids",
+        "/usr/share/pci.ids",
+        NULL
+    };
+
+    FILE* f = NULL;
+    for (int i = 0; paths[i]; i++) {
+
+        f = fopen(paths[i], "r");
+        if (f) break;
+    }
+
+    if (!f) { snprintf(out, out_len, "Unknown GPU"); return; }
 
     char line[256];
+    int in_vendor = 0;
+
     while (fgets(line, sizeof(line), f)) {
 
-        if (strstr(line, "VGA") || strstr(line, "3D controller") || strstr(line, "Display")) {
+        if (line[0] == '#' || line[0] == '\n') continue;
 
-            char* first_colon = strchr(line, ':');
-            if (first_colon) {
+        if (line[0] != '\t') {
 
-                char* second_colon = strchr(first_colon + 1, ':');
-                if (second_colon) {
+            unsigned int v;
+            if (sscanf(line, "%x", &v) == 1) in_vendor = (v == vid);
 
-                    char* name_start = second_colon + 1;
+        } else if (in_vendor && line[1] != '\t') {
+            unsigned int d;
+            char name[200];
 
-                    char* bracket_start = strchr(name_start, '[');
-                    char* bracket_end = NULL;
+            if (sscanf(line, " %x %199[^\n]", &d, name) == 2 && d == did) {
 
-                    if (bracket_start) {
-                        bracket_end = strchr(bracket_start + 1, ']');
-                    }
+                snprintf(out, out_len, "%s", name);
 
-                    if (bracket_start && bracket_end) {
-                        size_t len = bracket_end - (bracket_start + 1);
-                        if (len >= max_len) len = max_len - 1;
-
-                        strncpy(buffer, bracket_start + 1, len);
-                        buffer[len] = '\0';
-                    } else {
-                        while (*name_start == ' ') name_start++;
-                        name_start[strcspn(name_start, "\n")] = '\0';
-                        snprintf(buffer, max_len, "%s", name_start);
-                    }
-
-                    if (!strstr(line, "Intel") && !strstr(line, "Unknown")) {
-                        break;
-                    }
-                }
+                fclose(f);
+                return;
             }
         }
     }
-    pclose(f);
+
+    fclose(f);
+    snprintf(out, out_len, "Unknown GPU");
 }
 
+void fetch_gpu_name(hw_monitor_t* hw) {
 
-static void* fetch_gpu_name_thread(void* arg) {
-    hw_monitor_t* hw = (hw_monitor_t*) arg;
-    fetch_gpu_name(hw->gpu_name, sizeof(hw->gpu_name));
+    for (int i = 0; i < 4; i++) {
+        char uevent_path[MAX_PATH_LEN];
+        snprintf(uevent_path, MAX_PATH_LEN, "/sys/class/drm/card%d/device/uevent", i);
+
+        FILE* f = fopen(uevent_path, "r");
+        if (!f) continue;
+
+        char line[256];
+        unsigned int vid = 0, did = 0;
+        int found = 0;
+
+        while (fgets(line, sizeof(line), f)) {
+            if (sscanf(line, "PCI_ID=%x:%x", &vid, &did) == 2) {
+                found = 1;
+                break;
+            }
+        }
+        fclose(f);
+
+        if (!found) continue;
+
+        lookup_pci_name(vid, did, hw->gpu_name, sizeof(hw->gpu_name));
+
+        char* open  = strchr(hw->gpu_name, '[');
+        char* close = strrchr(hw->gpu_name, ']');
+
+        if(open && close && close > open) {
+
+            size_t len = close - (open + 1);
+            memmove(hw->gpu_name, open + 1, len);
+
+            hw->gpu_name[len] = '\0';
+        }
+
+        hw->gpu_name_ready = 1;
+        return;
+    }
+
+    snprintf(hw->gpu_name, sizeof(hw->gpu_name), "Unknown GPU");
     hw->gpu_name_ready = 1;
-    return NULL;
+
 }
 
 char* get_gpu_name(hw_monitor_t* hw) {
@@ -154,11 +191,7 @@ hw_monitor_t* init_hw_monitor() {
 
     find_thermal_zones(hw);
     find_hwmon_entries(hw);
-
-    snprintf(hw->gpu_name, sizeof(hw->gpu_name), "...");
-    pthread_t t;
-    pthread_create(&t, NULL, fetch_gpu_name_thread, hw);
-    pthread_detach(t);
+    fetch_gpu_name(hw);
 
     return hw;
 }
