@@ -149,6 +149,7 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
     cur_gen++;
 
     DIR* dir = opendir("/proc");
+    if(!dir) return;
 
     struct dirent* ent;
     while((ent = readdir(dir))) {

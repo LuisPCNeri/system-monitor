@@ -15,6 +15,7 @@ typedef struct system_stats {
 static void find_power_dir(system_stats* st) {
 
     DIR* dir = opendir("/sys/class/power_supply");
+    if(!dir) return;
 
     struct dirent* entry;
     while((entry = readdir(dir)) != NULL) {
@@ -41,7 +42,7 @@ static void find_power_dir(system_stats* st) {
 
 system_stats* init_st() {
 
-    system_stats* st = (system_stats*) malloc(sizeof(system_stats));
+    system_stats* st = (system_stats*) calloc(1, sizeof(system_stats));
     if(!st) return NULL;
 
     find_power_dir(st);
@@ -86,4 +87,8 @@ float read_power_draw_watts(system_stats* st) {
     fclose(f);
 
     return (float) power_draw / 1000000.0f;
+}
+
+void free_st(system_stats* st) {
+    free(st);
 }

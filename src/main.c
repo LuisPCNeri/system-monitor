@@ -243,6 +243,9 @@ int main(void) {
     }
 
     if(list) free(list);
+    if(hw) free_hw_monitor(hw);
+    if(st) free_st(st);
+
     tui_destroy();
     free_processes_map(map);
     return 0;

@@ -33,7 +33,11 @@ processes_map_t* create_map(int capacity) {
     map->size = 0;
     map->capacity = capacity;
     map->buckets = calloc(capacity, sizeof(process_node_t*));
-    if(!map->buckets) return NULL;
+
+    if(!map->buckets) {
+        free(map);
+        return NULL;
+    }
 
     return map;
 }

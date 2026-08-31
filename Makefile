@@ -22,10 +22,15 @@ $(TARGET): $(OBJS)
 shared: $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS_SHARED) -o $(TARGET)
 
+debug: CFLAGS  += -fsanitize=address,leak -O0
+debug: LDFLAGS_SHARED += -fsanitize=address,leak
+debug: clean $(OBJS)
+	$(CC) $(OBJS) $(LDFLAGS_SHARED) -fsanitize=address,leak -o $(TARGET)
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) $(TARGET)
 
-.PHONY: all shared clean
+.PHONY: all shared debug clean

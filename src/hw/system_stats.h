@@ -28,4 +28,10 @@ system_stats* init_st();
  * */
 float read_power_draw_watts(system_stats* st);
 
+/*
+ *  \brief Frees the memory allocated by init_st.
+ *  \param st An initialized or dinamically allocated system_stats pointer.
+ * */
+void free_st(system_stats* st);
+
 #endif

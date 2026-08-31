@@ -32,4 +32,10 @@ float read_cpu_temp(hw_monitor_t* hw);
  * */
 float read_gpu_temp(hw_monitor_t* hw);
 
+/*
+ *  \brief Frees the memory occupied by a dinamically allocated hw_monitor_t struct.
+ *  \param hw A pointer to either an initialized or dinamically allocated hw_monitor_t struct.
+ * */
+void free_hw_monitor(hw_monitor_t* hw);
+
 #endif

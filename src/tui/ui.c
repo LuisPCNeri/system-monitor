@@ -150,7 +150,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
     if(gpu_temp >= 0.0f) {
         int gpu_pair = CP_NORMAL;
         if      (gpu_temp >= 85.0f) gpu_pair = CP_CRIT;
-        else if (gpu_temp >= 80.0f) gpu_temp = CP_WARN;
+        else if (gpu_temp >= 80.0f) gpu_pair = CP_WARN;
 
         mvaddstr(1, (cols / 2), gpu_name);
 

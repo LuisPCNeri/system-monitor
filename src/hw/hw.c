@@ -134,7 +134,7 @@ static void lookup_pci_name(unsigned int vid, unsigned int did, char* out, size_
     snprintf(out, out_len, "Unknown GPU");
 }
 
-void fetch_gpu_name(hw_monitor_t* hw) {
+static void fetch_gpu_name(hw_monitor_t* hw) {
 
     for (int i = 0; i < 4; i++) {
         char uevent_path[MAX_PATH_LEN];
@@ -255,4 +255,8 @@ float read_gpu_temp(hw_monitor_t *hw) {
     }
 
     return final_temp;
+}
+
+void free_hw_monitor(hw_monitor_t* hw) {
+    free(hw);
 }
