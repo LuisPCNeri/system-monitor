@@ -16,6 +16,8 @@
 
 void tui_init() {
     initscr();
+    /* to prevent the switch from search to normal mode using the escape key taking so long*/
+    set_escdelay(25);
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
