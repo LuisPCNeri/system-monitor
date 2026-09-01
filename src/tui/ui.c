@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "ui.h"
+#include "../hw/hw.h"
 #include "../proc/mem.h"
 #include "../utils/hmap.h"
 
@@ -68,7 +69,7 @@ static void draw_bar(int y, int x, int w, float pct, const char* suffix) {
 
 void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t* processes_list, 
                 size_t count, const char* search, int app_mode, int cursor, float cpu_temp, float gpu_temp, char* gpu_name,
-                float uptime, float avg_load, float power_draw) {
+                float uptime, float avg_load, float power_draw, mount_info_t* mounts, short mount_amt, int mount_scroll) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
 
@@ -106,9 +107,9 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
     snprintf(cpu_suffix, sizeof(cpu_suffix), "%.1f%%", cpu_pct);
 
     attron(COLOR_PAIR(CP_DIM));
-    mvaddstr(1, 1, "CPU ");
+    mvaddstr(2, 1, "CPU ");
     attroff(COLOR_PAIR(CP_DIM));
-    draw_bar(1, 6, bar_w, cpu_pct, cpu_suffix);
+    draw_bar(2, 6, bar_w, cpu_pct, cpu_suffix);
 
     if (cpu_temp >= 0.0f) {
         int temp_pair = CP_NORMAL;
@@ -117,7 +118,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
         int temp_x = 6 + bar_w + 1 + (int)strlen(cpu_suffix) + 1;
         attron(COLOR_PAIR(temp_pair));
-        mvprintw(1, temp_x, "%.1f°C", cpu_temp);
+        mvprintw(2, temp_x, "%.1f°C", cpu_temp);
         attroff(COLOR_PAIR(temp_pair));
     }
 
@@ -129,9 +130,9 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
     snprintf(ram_suffix, sizeof(ram_suffix), "%.2f / %.2f GiB", (float) mem->used_mib / 1024.0f, (float) mem->total_mib / 1024.0f);
 
     attron(COLOR_PAIR(CP_DIM));
-    mvaddstr(2, 1, "RAM ");
+    mvaddstr(3, 1, "RAM ");
     attroff(COLOR_PAIR(CP_DIM));
-    draw_bar(2, 6, bar_w, ram_pct, ram_suffix);
+    draw_bar(3, 6, bar_w, ram_pct, ram_suffix);
 
 
     /* swap usage bar, used swap out of total */
@@ -141,55 +142,74 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
     snprintf(swap_suffix, sizeof(swap_suffix), "%.2f / %.2f GiB", (float) mem->swap_used / 1024.0f, (float) mem->swap_total / 1024.0f);
 
     attron(COLOR_PAIR(CP_DIM));
-    mvaddstr(3, 1, "SWAP ");
+    mvaddstr(4, 1, "SWAP ");
     attroff(COLOR_PAIR(CP_DIM));
 
-    draw_bar(3, 6, bar_w, swap_pct, swap_suffix);
+    draw_bar(4, 6, bar_w, swap_pct, swap_suffix);
 
 
     /* if a gpu_temp was recorded gpu temp here */
-
-    if(gpu_temp >= 0.0f) {
+     if (gpu_temp >= 0.0f) {
         int gpu_pair = CP_NORMAL;
         if      (gpu_temp >= 85.0f) gpu_pair = CP_CRIT;
         else if (gpu_temp >= 80.0f) gpu_pair = CP_WARN;
 
-        mvaddstr(1, (cols / 2), gpu_name);
-
-        char gpu_str[16];
-        snprintf(gpu_str, sizeof(gpu_str), "%.1fºC", gpu_temp);
+        mvprintw(5, 1, "%s", gpu_name);
 
         attron(COLOR_PAIR(gpu_pair));
-        mvaddstr(1, (cols / 2) + strlen(gpu_name) + 2, gpu_str);
+        mvprintw(5, strlen(gpu_name) + 2, "%.1f\xc2\xb0""C", gpu_temp);
         attroff(COLOR_PAIR(gpu_pair));
     }
 
 
-    /* search help and if currently filtering by process name the search key */
+    /* mount bars on right half, rows 1-3 */
+    {
+        int right_x     = cols / 2;
+        int right_w     = cols - right_x;
+        int label_w     = 12;
+        int suffix_res  = 22;  // "1023.9/1023.9GB\0"
+        int mount_bar_w = right_w - label_w - 3 - suffix_res;
+        if (mount_bar_w < 8) mount_bar_w = 8;
 
-    if( (search && search[0] != '\0') || (search[0] == '\0' && app_mode == 1)) {
-        attron(COLOR_PAIR(CP_WARN));
-        mvprintw(5, 1, "Search: %s |", search);
-        attroff(COLOR_PAIR(CP_WARN));
-    }
-    else {
-        attron(COLOR_PAIR(CP_DIM));
-        mvprintw(5, 1, "[s]earch");
-        attroff(COLOR_PAIR(CP_DIM));
-    }
+        int page_size   = 3;
+        int start       = mount_scroll * page_size;
 
+        for (int i = 0; i < page_size && start + i < mount_amt; i++) {
+            mount_info_t* m = &mounts[start + i];
+            int row = 2 + i;
+
+            char suffix[32];
+            double total_gb = m->total / (1024.0 * 1024.0 * 1024.0);
+            double used_gb  = m->used  / (1024.0 * 1024.0 * 1024.0);
+            if (total_gb >= 1.0)
+                snprintf(suffix, sizeof(suffix), "%.2f / %.2f GiB", used_gb, total_gb);
+            else
+                snprintf(suffix, sizeof(suffix), "%.2f / %.2f MiB",
+                         m->used / (1024.0 * 1024.0), m->total / (1024.0 * 1024.0));
+
+            float pct = m->total > 0
+                ? 100.0f * (float)m->used / (float)m->total
+                : 0.0f;
+
+            attron(COLOR_PAIR(CP_DIM));
+            mvprintw(row, right_x, "%-*.*s", label_w, label_w, m->mount_point);
+            attroff(COLOR_PAIR(CP_DIM));
+
+            draw_bar(row, right_x + label_w + 1, mount_bar_w, pct, suffix);
+        }
+    }
 
     /* data headers and line */
 
     attron(A_BOLD | COLOR_PAIR(CP_DIM));
-    mvprintw(6, 0, " %7s %-20s %7s %9s %11s %10s %8s %-20s", "PID", "NAME", "CPU %", "CORE %", "RSS", "PSS", "S", "USER");
+    mvprintw(7, 0, " %7s %-20s %7s %9s %11s %10s %8s %-20s", "PID", "NAME", "CPU %", "CORE %", "RSS", "PSS", "S", "USER");
     attroff(A_BOLD | COLOR_PAIR(CP_DIM));
-    mvhline(7, 0, ACS_HLINE, cols);
+    mvhline(8, 0, ACS_HLINE, cols);
 
 
     /* process data list */
 
-    int vis = rows - 8;
+    int vis = rows - 10;
 
     for(int i = 0; i < vis && (scroll + i) < (int) count ; i++) {
 
@@ -198,7 +218,7 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
         float rss = (float) p->rss_kb / 1024.0f;
         float pss = (float) p->pss_kb / 1024.0f;
-        int row = 8 + i;
+        int row = 9 + i;
 
         int is_selected = (scroll + i) == cursor;
         if (is_selected) {
@@ -262,13 +282,31 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
 
 
     /* footer */
+    const char* footer = " [q]uit  [UP/DOWN] scroll  [c]pu sort  [m]em sort  [k]ill  [t]erm  [</>] disks";
 
     attron(COLOR_PAIR(CP_DIM));
-    mvprintw(rows - 1, 0,
-         " [q]uit  [UP/DOWN] scroll  [c] sort CPU  [m] sort RAM  [k]ill forcefully [t]erminate cleanly");
+    mvaddstr(rows - 1, 0, footer);
     attroff(COLOR_PAIR(CP_DIM));
 
-    refresh();
+    if (search && (search[0] != '\0' || app_mode == 1)) {
+        char search_str[270];
+        snprintf(search_str, sizeof(search_str), "Search: %s |", search);
+
+        int search_x = cols - (int)strlen(search_str) - 1;
+        if (search_x > (int)strlen(footer)) {  // don't overlap footer text
+            attron(COLOR_PAIR(CP_WARN));
+            mvaddstr(rows - 1, search_x, search_str);
+            attroff(COLOR_PAIR(CP_WARN));
+        }
+    }
+    else {
+        attron(COLOR_PAIR(CP_DIM));
+        mvaddstr(rows - 1, cols - (int) sizeof("[s]earch") - 1, "[s]earch");
+        attroff(COLOR_PAIR(CP_DIM));
+    }
+
+    wnoutrefresh(stdscr);
+    doupdate();
 }
 
 int ui_getc() {

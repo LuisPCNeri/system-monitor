@@ -80,9 +80,10 @@ int main(void) {
 
     float uptime = 0.0f, load_avg = 0.0f, power_draw = 0.0f;
 
-    int cursor  = 0;
-    int scroll  = 0;
-    int sort_by = 0;
+    int cursor     = 0;
+    int scroll     = 0;
+    int sort_by    = 0;
+    int mnt_scroll = 0;
 
     app_mode mode        = MODE_NORMAL;
     char search_buf[256] = {0};
@@ -96,26 +97,37 @@ int main(void) {
 
     int is_starting = 1;
 
-    int max_scroll = 0;
+    int max_scroll       = 0;
     process_data_t* list = NULL;
-    size_t count = 0;
-    float cpu_pct = 0.0f;
+    size_t count         = 0;
+    float cpu_pct        = 0.0f;
 
-    int rows = getmaxy(stdscr);
-    int visible_rows = rows - 9;
+    int rows         = getmaxy(stdscr);
+    int visible_rows = rows - 10;
+
+    int need_refilter = 0, need_redraw = 0;
 
     while (g_running) {
         if (g_resized) {
             g_resized = 0;
             endwin();
             refresh();
+
+            rows = getmaxy(stdscr);
+            visible_rows = rows - 10;
+
+            if (cursor >= (int)count) cursor = (int)count - 1;
+            if (cursor < 0) cursor = 0;
+
+            if (cursor >= scroll + visible_rows) scroll = cursor - visible_rows + 1;
+            if (scroll < 0) scroll = 0;
+
+            need_redraw = 1;
         }
 
 
         clock_gettime(CLOCK_MONOTONIC, &t1);
         long elapsed = (t1.tv_sec - t0.tv_sec) * 1000 + (t1.tv_nsec - t0.tv_nsec) / 1000000;
-
-        int need_refilter = 0, need_redraw = 0;
 
         if(is_starting || elapsed >= 1500) {
             is_starting = 0;
@@ -154,6 +166,7 @@ int main(void) {
                 else if(ch == '\n') {
                     mode = MODE_NORMAL;
                     scroll = 0;
+                    need_redraw = 1;
                 }
                 else if(ch == KEY_BACKSPACE || ch == 127 || ch == '\b') {
                     if(search_len > 0) search_buf[--search_len] = '\0';
@@ -224,6 +237,21 @@ int main(void) {
                     sort_by = 1;
                     need_refilter = 1;
                     break;
+                case '<':
+                    if(mnt_scroll > 0) {
+                        mnt_scroll--;
+                        need_redraw = 1;
+                    }
+                    break;
+                case '>':
+                    {
+                        int total_pages = (get_mounts_amount(hw) + 2) / 3;
+                        if(mnt_scroll < total_pages - 1) {
+                            mnt_scroll++;
+                            need_redraw = 1;
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -247,15 +275,26 @@ int main(void) {
             qsort(list, count, sizeof(process_data_t),
                   sort_by == 0 ? proc_cmp_cpu : proc_cmp_mem);
 
+            if (cursor >= (int)count) cursor = (int)count - 1;
+            if (cursor < 0) cursor = 0;
+            if (scroll > cursor) scroll = cursor;
+            if (cursor >= scroll + visible_rows) scroll = cursor - visible_rows + 1;
+            if (scroll < 0) scroll = 0;
+
             max_scroll = map->size > 0 ? map->size - 1 : 0;
             if (scroll > max_scroll) scroll = max_scroll;
         }
 
-        if( (need_redraw || need_refilter) && list)
-            tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor, cpu_temp, gpu_temp,
-                        get_gpu_name(hw) == NULL ? "UNKNWON GPU" : get_gpu_name(hw)  ,uptime, load_avg, (float) power_draw);
+        if( (need_redraw || need_refilter) && list) {
+            need_refilter = 0;
+            need_redraw   = 0;
 
-        sleep_ms(16);
+            tui_render(cpu_pct, &mem, scroll, list, count, search_buf, mode, cursor, cpu_temp, gpu_temp,
+                        get_gpu_name(hw) == NULL ? "UNKNWON GPU" : get_gpu_name(hw)  ,uptime, load_avg, (float) power_draw,
+                        get_mounts(hw), get_mounts_amount(hw), mnt_scroll);
+        }
+
+        sleep_ms(33);
     }
 
     if(list) free(list);

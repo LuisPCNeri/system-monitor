@@ -1,6 +1,7 @@
 #ifndef __UI_H__
 #define __UI_H__
 
+#include "../hw/hw.h"
 #include "../proc/mem.h"
 #include "../proc/proc.h"
 
@@ -14,7 +15,7 @@ void tui_init();
  * */
 void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t* processes_list, 
                 size_t count, const char* search, int app_mode, int cursor, float cpu_temp, float gpu_temp, char* gpu_name,
-                float uptime, float avg_load, float power_draw);
+                float uptime, float avg_load, float power_draw, mount_info_t* mounts, short mount_amt, int mount_scroll);
 
 /*
  * \brief Gets the character inputed by the user.
