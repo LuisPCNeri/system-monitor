@@ -5,8 +5,9 @@ A lightweight terminal system monitor for Linux, written in C with ncurses.
 ## Features
 
 - Real-time CPU, RAM and swap usage bars with color-coded load levels
-- System uptime and 5-minute average CPU load in the header
-- CPU temperature display, plus GPU temperature when available (AMD/Intel GPUs via hwmon; NVIDIA proprietary drivers are not supported)
+- System uptime, 5-minute average CPU load and power draw (watts) in the header
+- CPU temperature display, plus GPU model name and temperature when available (AMD/Intel via hwmon, NVIDIA via `nvidia-smi`)
+- Per-filesystem disk usage bars, paged with `<` / `>`
 - Live process table (PID, name, CPU %, per-core CPU %, RSS, PSS, state, user)
 - Sort processes by CPU (`c`) or memory (`m`)
 - Search/filter processes by name (`s` / `f`)
@@ -52,6 +53,7 @@ For a smaller binary that links against the system's ncurses shared library inst
 | Enter | Confirm search |
 | c | Sort by CPU % |
 | m | Sort by RAM usage |
+| < / > | Page through disk usage bars |
 | k | Kill selected process (SIGKILL) |
 | t / Del | Terminate selected process (SIGTERM) |
 
@@ -59,7 +61,7 @@ For a smaller binary that links against the system's ncurses shared library inst
 
 - `src/main.c` — entry point, main loop, input handling
 - `src/proc/` — `/proc` data readers (`cpu.c`, `mem.c`, `proc.c`)
-- `src/hw/` — hardware monitoring and system stats (`hw.c`, `system_stats.c`): CPU/GPU temperatures, uptime, load average
+- `src/hw/` — hardware monitoring and system stats (`hw.c`, `system_stats.c`): CPU/GPU temperatures, mounts, uptime, load average, power draw
 - `src/tui/` — ncurses interface (`ui.c`)
 - `src/utils/` — hash map used to track processes (`hmap.c`)
 
