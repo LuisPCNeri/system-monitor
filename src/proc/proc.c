@@ -13,6 +13,46 @@
 
 static unsigned long long cur_gen = 0;
 
+#define UID_CACHE_SIZE 256
+
+typedef struct {
+    uid_t uid;
+    char  name[32];
+} uid_entry_t;
+
+static uid_entry_t uid_cache[UID_CACHE_SIZE];
+static int         uid_cache_len   = 0;
+static int         uid_cache_built = 0;
+
+static void build_uid_cache(void) {
+    if (uid_cache_built) return;
+
+    FILE* f = fopen("/etc/passwd", "r");
+    if (!f) { uid_cache_built = 1; return; }
+
+    char line[256];
+    while (fgets(line, sizeof(line), f) && uid_cache_len < UID_CACHE_SIZE) {
+        char* c1 = strchr(line, ':');
+        if (!c1) continue;
+        char* c2 = strchr(c1 + 1, ':');
+        if (!c2) continue;
+
+        uid_t uid = (uid_t) atoi(c2 + 1);
+
+        size_t len = c1 - line;
+        if (len >= sizeof(uid_cache[uid_cache_len].name))
+            len = sizeof(uid_cache[uid_cache_len].name) - 1;
+
+        uid_cache[uid_cache_len].uid = uid;
+        memcpy(uid_cache[uid_cache_len].name, line, len);
+        uid_cache[uid_cache_len].name[len] = '\0';
+        uid_cache_len++;
+    }
+
+    fclose(f);
+    uid_cache_built = 1;
+}
+
 static int cond(process_data_t* data) {
     return data->gen == cur_gen;
 }
@@ -117,31 +157,12 @@ static int read_process_uid(process_data_t* p) {
 }
 
 static char* resolve_user_with_uid(int uid) {
+    build_uid_cache();
 
-    static char uname[32];
-    FILE *f = fopen("/etc/passwd", "r");
-    if (!f) return NULL;
+    for (int i = 0; i < uid_cache_len; i++)
+        if (uid_cache[i].uid == (uid_t)uid)
+            return uid_cache[i].name;
 
-    char line[256];
-    while (fgets(line, sizeof(line), f)) {
-        char *colon1 = strchr(line, ':');
-        if (!colon1) continue;
-        char *colon2 = strchr(colon1 + 1, ':');
-        if (!colon2) continue;
-
-        if (atoi(colon2 + 1) == uid) {
-            size_t len = colon1 - line;
-            if (len >= sizeof(uname)) len = sizeof(uname) - 1;
-
-            memcpy(uname, line, len);
-            uname[len] = '\0';
-
-            fclose(f);
-            return uname;
-        }
-    }
-
-    fclose(f);
     return NULL;
 }
 
@@ -178,7 +199,7 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
 
         process_data_t* existing = get_process(m, pid);
 
-        if(cur_gen == 1 || cur_gen % 5 == 0) read_pss(&p);
+        if(cur_gen == 1 || (int) cur_gen % 5 == p.pid % 5) read_pss(&p);
         else p.pss_kb = existing ? existing->pss_kb : 0;
 
         if(existing) {
