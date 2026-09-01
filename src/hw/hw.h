@@ -5,6 +5,16 @@
 
 typedef struct hw_monitor_t hw_monitor_t;
 
+typedef struct {
+
+    char mount_point[256];
+    char fs_type[256];
+    unsigned long long total;
+    unsigned long long used;
+    unsigned long long free;
+
+} mount_info_t;
+
 /*
  *  \brief Initializes an hw_monitor_t object along with its data.
  *  \returns An hw_monitor_t pointer or NULL if there was an error.
@@ -31,6 +41,11 @@ float read_cpu_temp(hw_monitor_t* hw);
  *  \returns The gpu temp in ºC or -1.0f if there was an error.
  * */
 float read_gpu_temp(hw_monitor_t* hw);
+
+
+mount_info_t* get_mounts(hw_monitor_t* hw);
+
+short get_mounts_amount(hw_monitor_t* hw);
 
 /*
  *  \brief Frees the memory occupied by a dinamically allocated hw_monitor_t struct.

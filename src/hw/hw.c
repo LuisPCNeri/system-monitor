@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
-#include <pthread.h>
+#include <sys/statvfs.h>
+
+#define MAX_READ_MOUNTS 8
 
 typedef struct hw_monitor_t {
 
@@ -16,6 +18,9 @@ typedef struct hw_monitor_t {
 
     char gpu_name[256];
     int gpu_name_ready;
+
+    mount_info_t mounts[MAX_READ_MOUNTS];
+    short mount_amt;
 
 } hw_monitor_t;
 
@@ -186,6 +191,48 @@ char* get_gpu_name(hw_monitor_t* hw) {
     return hw->gpu_name;
 }
 
+static int read_mounts(mount_info_t* out, int max) {
+
+    FILE* f = fopen("/proc/mounts", "r");
+    if(!f) return 0;
+
+    char device[256], mount[256], fstype[64], options[256];
+    int flags, dump;
+    int count = 0;
+
+    while (count < max &&
+           fscanf(f, "%255s %255s %63s %255s %d %d",
+                  device, mount, fstype, options, &flags, &dump) == 6) {
+
+        /* skip pseudo/virtual filesystems */
+        if (strcmp(fstype, "proc")     == 0 ||
+            strcmp(fstype, "sysfs")    == 0 ||
+            strcmp(fstype, "devtmpfs") == 0 ||
+            strcmp(fstype, "tmpfs")    == 0 ||
+            strcmp(fstype, "cgroup2")  == 0 ||
+            strcmp(fstype, "devpts")   == 0) continue;
+
+        if (strncmp(device, "/dev/", 5) != 0) continue;
+
+        struct statvfs st;
+        if (statvfs(mount, &st) != 0) continue;
+
+        if (st.f_blocks == 0) continue;
+
+        snprintf(out[count].mount_point, sizeof(out[count].mount_point), "%s", mount);
+        snprintf(out[count].fs_type,     sizeof(out[count].fs_type),     "%s", fstype);
+
+        out[count].total = st.f_blocks * st.f_frsize;
+        out[count].free  = st.f_bfree  * st.f_frsize;
+        out[count].used  = out[count].total - out[count].free;
+
+        count++;
+    }
+
+    fclose(f);
+    return count;
+}
+
 hw_monitor_t* init_hw_monitor() {
     hw_monitor_t* hw = (hw_monitor_t*) calloc(1, sizeof(hw_monitor_t));
 
@@ -193,7 +240,17 @@ hw_monitor_t* init_hw_monitor() {
     find_hwmon_entries(hw);
     fetch_gpu_name(hw);
 
+    hw->mount_amt = read_mounts(hw->mounts, MAX_READ_MOUNTS);
+
     return hw;
+}
+
+mount_info_t* get_mounts(hw_monitor_t* hw) {
+    return hw->mounts;
+}
+
+short get_mounts_amount(hw_monitor_t* hw) {
+    return hw->mount_amt;
 }
 
 float read_cpu_temp(hw_monitor_t* hw) {
@@ -212,9 +269,9 @@ float read_cpu_temp(hw_monitor_t* hw) {
 
 static int nvidia_smi_available = 1;
 
-/// done using nvidia-smi by spawning a sub process. whilst spawning a subprocess is an expensive task on the cpu, this is ran every 1.5 seconds
-/// and may be done even less frequently. The other option would be breaking my objective with static compilation, that is to be portable
-/// so nvidia-smi will be used in place of dlopen
+/* done using nvidia-smi by spawning a sub process. whilst spawning a subprocess is an expensive task on the cpu, this is ran every 1.5 seconds
+*  and may be done even less frequently. The other option would be breaking my objective with static compilation, that is to be portable
+*  so nvidia-smi will be used in place of dlopen */
 static int read_nvidia_gpu_temp(void) {
     if(!nvidia_smi_available) return -1;
 
