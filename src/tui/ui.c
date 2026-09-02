@@ -151,16 +151,18 @@ void tui_render(float cpu_pct, const mem_info_t* mem, int scroll, process_data_t
     draw_bar(4, 6, bar_w, swap_pct, swap_suffix);
 
 
-    /* if a gpu_temp was recorded gpu temp here */
-     if (gpu_temp >= 0.0f) {
+    char gpu_name_str[64];
+    snprintf(gpu_name_str, sizeof(gpu_name_str), "%s: %s", "Graphics", gpu_name);
+    mvaddstr(5, 1, gpu_name_str);
+
+    if(gpu_temp >= 0.0f) {
+
         int gpu_pair = CP_NORMAL;
         if      (gpu_temp >= 85.0f) gpu_pair = CP_CRIT;
         else if (gpu_temp >= 80.0f) gpu_pair = CP_WARN;
 
-        mvprintw(5, 1, "%s", gpu_name);
-
         attron(COLOR_PAIR(gpu_pair));
-        mvprintw(5, strlen(gpu_name) + 2, "%.1f\xc2\xb0""C", gpu_temp);
+        mvprintw(5, strlen(gpu_name_str) + 2, "%.1f\xc2\xb0""C", gpu_temp);
         attroff(COLOR_PAIR(gpu_pair));
     }
 
