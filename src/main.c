@@ -217,17 +217,25 @@ int main(void) {
                     need_redraw = 1;
                     break;
                 case KEY_PPAGE:
+                    if (count == 0) break;
+
                     if (cursor > 10) cursor -= 10;
                     else cursor = 0;
+
                     if (cursor < scroll) scroll = cursor;
+                    if (scroll < 0) scroll = 0;
 
                     need_redraw = 1;
                     break;
                 case KEY_NPAGE:
-                    if (cursor < (int) count - 10) cursor += 10;
-                    else cursor = (int) count - 1;
-                    if (cursor >= scroll + visible_rows - 10) scroll = cursor - visible_rows + 1;
+                    if (count == 0) break;
 
+                    if (cursor < (int)count - 10) cursor += 10;
+                    else cursor = (int)count - 1;
+
+                    if (cursor >= scroll + visible_rows) scroll = cursor - visible_rows + 1;
+                    if (scroll < 0) scroll = 0;
+                        
                     need_redraw = 1;
                     break;
                 case 'c': case 'C':
