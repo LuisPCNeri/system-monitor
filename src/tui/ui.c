@@ -55,13 +55,16 @@ static void draw_bar(int y, int x, int w, float pct, const char* suffix) {
     if (pct > 85.0f) pair = CP_CRIT;
     else if (pct > 60.0f) pair = CP_WARN;
 
+    char bar[w];
     mvaddch(y, x, '[');
-    attron(COLOR_PAIR(pair));
 
-    for(int i = 0; i < filled; i++) mvaddch(y, x + 1 + i, '|');
+    attron(COLOR_PAIR(pair));
+    memset(bar, '|', filled);
+    memset(bar + filled, ' ', inner - filled);
+    bar[inner] = '\0';
+    mvaddstr(y, x + 1, bar);
     attroff(COLOR_PAIR(pair));
 
-    for(int i = filled; i < inner; i++) mvaddch(y, x + 1 + i, ' ');
     mvaddch(y, x + w - 1, ']');
 
     if (suffix) mvaddstr(y, x + w + 1, suffix);
