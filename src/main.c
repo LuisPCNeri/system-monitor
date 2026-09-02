@@ -98,7 +98,8 @@ int main(void) {
     int is_starting = 1;
 
     int max_scroll       = 0;
-    process_data_t* list = NULL;
+    size_t list_cap      = 4096;
+    process_data_t* list = (process_data_t*) malloc(list_cap * sizeof(process_data_t));
     size_t count         = 0;
     float cpu_pct        = 0.0f;
 
@@ -258,8 +259,7 @@ int main(void) {
 
 
         if(need_refilter) {
-            free(list);
-            count = get_all_processes(map, &list);
+            count = get_all_processes(map, list, list_cap);
 
             if(search_len > 0) {
                 size_t out = 0;

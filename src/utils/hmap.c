@@ -80,25 +80,17 @@ process_data_t* get_process(processes_map_t* m, pid_t pid) {
     return NULL;
 }
 
-size_t get_all_processes(processes_map_t* m, process_data_t** out) {
-    if(m->size == 0) {
-        *out = NULL;
-        return 0;
-    }
-
-    *out = (process_data_t*) malloc(m->size * sizeof(process_data_t));
-    if(!*out) return 0;
-
-    size_t idx = 0;
-    for(int i = 0; i < m->capacity; i++) {
+size_t get_all_processes(processes_map_t* m, process_data_t* out, size_t max_size) {
+    size_t count = 0;
+    for(int i = 0; i < m->capacity && count < max_size; i++) {
         process_node_t* cur = m->buckets[i];
         while(cur) {
-            (*out)[idx++] = cur->data;
+            out[count++] = cur->data;
             cur = cur->next;
         }
     }
 
-    return m->size;
+    return count;
 }
 
 void filter_map(processes_map_t* map, FilterFunc cond) {

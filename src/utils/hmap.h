@@ -59,11 +59,13 @@ process_data_t* get_process(processes_map_t* m, pid_t pid);
 
 /*
  *  \brief Transforms the map into a list containing all of the processes in the map.
+ *  REPLACES the data in the *out parameter with newer data.
  *  \param m The map to convert.
- *  \param out A pointer to a process_data_t pointer to store the list.
+ *  \param out A pointer to an array of process_data_t.
+ *  \param max_size The max size of the out buffer.
  *  \returns The size of the list, or 0 if the size is 0 or **out is an invalid pointer.
  * */
-size_t get_all_processes(processes_map_t* m, process_data_t** out);
+size_t get_all_processes(processes_map_t* m, process_data_t* out, size_t max_size);
 
 /*
  *  \brief Frees the memory taken by the map.
