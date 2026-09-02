@@ -195,7 +195,10 @@ void refresh_processes(processes_map_t* m, unsigned long long cpu_total_delta) {
         }
 
         if(pid <= 0) continue;
-        if((int) m->size >= m->capacity) break;
+        //if((int) m->size >= m->capacity) break;
+        if((int) m->size >= m->capacity * 3 / 4) {
+            if(resize_map(m) < 0) break;
+        }
 
         process_data_t p = {0};
         p.pid = pid;

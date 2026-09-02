@@ -65,7 +65,7 @@ int main(void) {
     float cpu_temp = read_cpu_temp(hw);
     float gpu_temp = read_gpu_temp(hw);
 
-    processes_map_t* map = create_map(4096);
+    processes_map_t* map = create_map(512);
     if(!map) {
         free_hw_monitor(hw);
         free_st(st);
@@ -235,7 +235,7 @@ int main(void) {
 
                     if (cursor >= scroll + visible_rows) scroll = cursor - visible_rows + 1;
                     if (scroll < 0) scroll = 0;
-                        
+
                     need_redraw = 1;
                     break;
                 case 'c': case 'C':

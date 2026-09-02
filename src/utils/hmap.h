@@ -80,4 +80,6 @@ void free_processes_map(processes_map_t* m);
  * */
 void filter_map(processes_map_t* map, FilterFunc cond);
 
+int resize_map(processes_map_t* m);
+
 #endif

@@ -115,6 +115,32 @@ void filter_map(processes_map_t* map, FilterFunc cond) {
     }
 }
 
+int resize_map(processes_map_t* m) {
+    int new_cap = m->capacity * 2;
+    process_node_t** new_buckets = calloc(new_cap, sizeof(process_node_t*));
+    if(!new_buckets) return -1;
+
+    for(int i = 0; i < m->capacity; i++) {
+        process_node_t* cur = m->buckets[i];
+
+        while(cur) {
+
+            process_node_t* next = cur->next;
+
+            unsigned int new_idx = hash_pid(cur->data.pid, new_cap);
+            cur->next = new_buckets[new_idx];
+            new_buckets[new_idx] = cur;
+
+            cur = next;
+        }
+    }
+
+    free(m->buckets);
+    m->buckets = new_buckets;
+    m->capacity = new_cap;
+
+    return 0;
+}
 
 void free_processes_map(processes_map_t* m) {
 
