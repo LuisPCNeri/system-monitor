@@ -13,44 +13,51 @@
 
 static unsigned long long cur_gen = 0;
 
-#define UID_CACHE_SIZE 256
+#define UID_MAP_SIZE 512
 
 typedef struct {
     uid_t uid;
     char  name[32];
-} uid_entry_t;
+    int   occupied;
+} uid_map_entry_t;
 
-static uid_entry_t uid_cache[UID_CACHE_SIZE];
-static int         uid_cache_len   = 0;
-static int         uid_cache_built = 0;
+static uid_map_entry_t uid_map[UID_MAP_SIZE];
+static int             uid_map_built = 0;
 
 static void build_uid_cache(void) {
-    if (uid_cache_built) return;
+    if (uid_map_built) return;
 
     FILE* f = fopen("/etc/passwd", "r");
-    if (!f) { uid_cache_built = 1; return; }
+    if (!f) { uid_map_built = 1; return; }
 
     char line[256];
-    while (fgets(line, sizeof(line), f) && uid_cache_len < UID_CACHE_SIZE) {
+    while (fgets(line, sizeof(line), f)) {
+
         char* c1 = strchr(line, ':');
         if (!c1) continue;
+
         char* c2 = strchr(c1 + 1, ':');
         if (!c2) continue;
 
         uid_t uid = (uid_t) atoi(c2 + 1);
 
-        size_t len = c1 - line;
-        if (len >= sizeof(uid_cache[uid_cache_len].name))
-            len = sizeof(uid_cache[uid_cache_len].name) - 1;
+        /* hash: uid % size, linear probe on collision */
+        unsigned int slot = (unsigned int)uid & (UID_MAP_SIZE - 1);
+        while (uid_map[slot].occupied && uid_map[slot].uid != uid)
+            slot = (slot + 1) & (UID_MAP_SIZE - 1);
 
-        uid_cache[uid_cache_len].uid = uid;
-        memcpy(uid_cache[uid_cache_len].name, line, len);
-        uid_cache[uid_cache_len].name[len] = '\0';
-        uid_cache_len++;
+        uid_map[slot].uid      = uid;
+        uid_map[slot].occupied = 1;
+
+        size_t len = (size_t)(c1 - line);
+        if (len >= sizeof(uid_map[slot].name)) len = sizeof(uid_map[slot].name) - 1;
+
+        memcpy(uid_map[slot].name, line, len);
+        uid_map[slot].name[len] = '\0';
     }
 
     fclose(f);
-    uid_cache_built = 1;
+    uid_map_built = 1;
 }
 
 static int cond(process_data_t* data) {
@@ -159,9 +166,12 @@ static int read_process_uid(process_data_t* p) {
 static char* resolve_user_with_uid(int uid) {
     build_uid_cache();
 
-    for (int i = 0; i < uid_cache_len; i++)
-        if (uid_cache[i].uid == (uid_t)uid)
-            return uid_cache[i].name;
+    unsigned int slot = (unsigned int)uid & (UID_MAP_SIZE - 1);
+    while (uid_map[slot].occupied) {
+
+        if (uid_map[slot].uid == (uid_t)uid) return uid_map[slot].name;
+        slot = (slot + 1) & (UID_MAP_SIZE - 1);
+    }
 
     return NULL;
 }
