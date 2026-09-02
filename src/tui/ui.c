@@ -53,7 +53,7 @@ static void draw_bar(int y, int x, int w, float pct, const char* suffix) {
 
     int pair = CP_NORMAL;
     if (pct > 85.0f) pair = CP_CRIT;
-    else if (pct > 60.0f) pair = CP_WARN;
+    else if (pct > 50.0f) pair = CP_WARN;
 
     char bar[w];
     mvaddch(y, x, '[');
